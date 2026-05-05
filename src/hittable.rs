@@ -1,9 +1,11 @@
+use crate::interval::Interval;
 use crate::ray::Ray;
 use crate::vec3::{Point3, Vec3};
 
 pub struct HitRecord {
     pub p: Point3,
     pub normal: Vec3,
+    // t is distance
     pub t: f32,
     pub front_face: bool,
 }
@@ -20,5 +22,5 @@ impl HitRecord {
 }
 
 pub trait Hittable {
-    fn hit(&self, r: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord>;
+    fn hit(&self, r: &Ray, ray_t: Interval) -> Option<HitRecord>;
 }
