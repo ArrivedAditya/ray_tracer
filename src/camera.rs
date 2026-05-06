@@ -1,3 +1,5 @@
+use rand::{RngExt, rngs::ThreadRng};
+
 use crate::{
     color::{Color, write_color},
     hittable::Hittable,
@@ -10,10 +12,14 @@ use crate::{
 use std::io::{BufWriter, stdout};
 
 pub struct Camera {
-    pub aspect_ratio: f32,
     pub image_width: i32,
+    pub sample_per_pixel: i32,
+
+    // for random generation
+    pub rng: ThreadRng,
 
     image_height: i32,
+    pixel_samples_scale: f32,
     center: Point3,
     pixel00_loc: Point3,
     pixel_delta_u: Vec3,
@@ -21,16 +27,20 @@ pub struct Camera {
 }
 
 impl Camera {
-    pub fn new(aspect_ratio: f32, image_width: i32) -> Self {
+    pub fn new(aspect_ratio: f32, image_width: i32, sample_per_pixel: i32, rng: ThreadRng) -> Self {
         let mut image_height = (image_width as f32 / aspect_ratio) as i32;
-        if image_height < 1 {
+        if image_height < 0 {
             image_height = 1;
         }
 
+        let pixel_samples_scale = 1.0 / sample_per_pixel as f32;
+
         Self {
-            aspect_ratio,
             image_width,
+            sample_per_pixel,
+            rng,
             image_height,
+            pixel_samples_scale,
             center: Point3::new(0.0, 0.0, 0.0),
             pixel00_loc: Point3::new(0.0, 0.0, 0.0),
             pixel_delta_u: Vec3::new(0.0, 0.0, 0.0),
@@ -43,19 +53,18 @@ impl Camera {
         println!("P3\n{} {}\n255", self.image_width, self.image_height);
 
         let mut out = BufWriter::new(stdout());
+        let intensity = Interval::new(0.0, 0.999);
 
         for j in 0..self.image_height {
             eprint!("\rScanlines remaining {} ", self.image_height - j);
             for i in 0..self.image_width {
-                let pixel_center = self.pixel00_loc
-                    + (i as f32 * self.pixel_delta_u)
-                    + (j as f32 * self.pixel_delta_v);
-                let ray_direction = pixel_center - self.center;
-
-                let r = Ray::new(self.center, ray_direction);
-                let pixel_color = self.ray_color(&r, world);
-
-                write_color(&mut out, pixel_color).expect("Failed to write");
+                let mut pixel_color = Color::new(0.0, 0.0, 0.0);
+                for sample in 0..self.sample_per_pixel {
+                    let r = self.get_ray(i, j);
+                    pixel_color += self.ray_color(&r, world);
+                }
+                write_color(&mut out, &intensity, self.pixel_samples_scale * pixel_color)
+                    .expect("Failed to write");
             }
         }
         eprintln!("\rDone                               ")
@@ -66,6 +75,7 @@ impl Camera {
         let focal_length: f32 = 1.0;
         let viewport_height: f32 = 2.0;
         let viewport_width = viewport_height * (self.image_width as f32 / self.image_height as f32);
+
         self.center = Point3::new(0.0, 0.0, 0.0);
 
         // calculate horizontal(u) and vertical(v) viewport edges
@@ -82,8 +92,31 @@ impl Camera {
         self.pixel00_loc = viewport_upper_left + 0.5 * (self.pixel_delta_u + self.pixel_delta_v);
     }
 
+    fn get_ray(&mut self, i: i32, j: i32) -> Ray {
+        // Construct a camera ray originating from the origin and directed at randomly sampled
+        // point around the pixel location i, j.
+
+        let offset = self.sample_square();
+        let pixel_sample = self.pixel00_loc
+            + ((i as f32 + offset.x) * self.pixel_delta_u)
+            + ((j as f32 + offset.y) * self.pixel_delta_v);
+
+        let ray_direction = pixel_sample - self.center;
+
+        Ray::new(self.center, ray_direction)
+    }
+
+    fn sample_square(&mut self) -> Vec3 {
+        // Returns the vector to a random point in the [-.4,-.5]-[+.5,+.5] unit square.
+        Vec3::new(
+            self.rng.random_range(-0.5..=0.5),
+            self.rng.random_range(-0.5..=0.5),
+            0.0,
+        )
+    }
+
     fn ray_color(&self, r: &Ray, world: &dyn Hittable) -> Color {
-        if let Some(rec) = world.hit(r, Interval::new(0.0, f32::INFINITY)) {
+        if let Some(rec) = world.hit(r, Interval::new(0.001, f32::INFINITY)) {
             return 0.5 * Color::new(rec.normal.x + 1.0, rec.normal.y + 1.0, rec.normal.z + 1.0);
         }
         // unit_direction vector

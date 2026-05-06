@@ -13,22 +13,36 @@ impl Color {
     }
 }
 
-pub fn write_color<W: Write>(out: &mut W, pixel_color: Color) -> io::Result<()> {
-    let rbyte = (255.999 * pixel_color.r) as u8;
-    let gbyte = (255.999 * pixel_color.g) as u8;
-    let bbyte = (255.999 * pixel_color.b) as u8;
+pub fn write_color<W: Write>(
+    out: &mut W,
+    intensity: &Interval,
+    pixel_color: Color,
+) -> io::Result<()> {
+    let rbyte = (256.0 * intensity.clamp(pixel_color.r)) as u8;
+    let gbyte = (256.0 * intensity.clamp(pixel_color.g)) as u8;
+    let bbyte = (256.0 * intensity.clamp(pixel_color.b)) as u8;
 
     writeln!(out, "{} {} {}", rbyte, gbyte, bbyte)?;
 
     Ok(())
 }
 
-use std::ops::{Add, Mul};
+use std::ops::{Add, AddAssign, Mul};
+
+use crate::interval::Interval;
 
 impl Add for Color {
     type Output = Color;
     fn add(self, v: Color) -> Color {
         Color::new(self.r + v.r, self.g + v.g, self.b + v.b)
+    }
+}
+
+impl AddAssign for Color {
+    fn add_assign(&mut self, rhs: Self) {
+        self.r += rhs.r;
+        self.g += rhs.g;
+        self.b += rhs.b;
     }
 }
 
