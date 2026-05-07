@@ -6,7 +6,7 @@ use crate::{
     hittable_list::HittableList,
     interval::Interval,
     ray::Ray,
-    vec3::{Point3, Vec3},
+    vec3::{Point3, Vec3, random_unit_vector},
 };
 
 use std::io::{BufWriter, stdout};
@@ -14,9 +14,10 @@ use std::io::{BufWriter, stdout};
 pub struct Camera {
     pub image_width: i32,
     pub sample_per_pixel: i32,
+    pub max_depth: i32,
 
     // for random generation
-    pub rng: ThreadRng,
+    rng: ThreadRng,
 
     image_height: i32,
     pixel_samples_scale: f32,
@@ -27,17 +28,20 @@ pub struct Camera {
 }
 
 impl Camera {
-    pub fn new(aspect_ratio: f32, image_width: i32, sample_per_pixel: i32, rng: ThreadRng) -> Self {
+    pub fn new(aspect_ratio: f32, image_width: i32, sample_per_pixel: i32, max_depth: i32) -> Self {
         let mut image_height = (image_width as f32 / aspect_ratio) as i32;
         if image_height < 0 {
             image_height = 1;
         }
+
+        let rng = rand::rng();
 
         let pixel_samples_scale = 1.0 / sample_per_pixel as f32;
 
         Self {
             image_width,
             sample_per_pixel,
+            max_depth,
             rng,
             image_height,
             pixel_samples_scale,
@@ -61,7 +65,7 @@ impl Camera {
                 let mut pixel_color = Color::new(0.0, 0.0, 0.0);
                 for sample in 0..self.sample_per_pixel {
                     let r = self.get_ray(i, j);
-                    pixel_color += self.ray_color(&r, world);
+                    pixel_color += self.ray_color(&r, self.max_depth, world);
                 }
                 write_color(&mut out, &intensity, self.pixel_samples_scale * pixel_color)
                     .expect("Failed to write");
@@ -115,9 +119,14 @@ impl Camera {
         )
     }
 
-    fn ray_color(&self, r: &Ray, world: &dyn Hittable) -> Color {
+    fn ray_color(&self, r: &Ray, depth: i32, world: &dyn Hittable) -> Color {
+        if depth <= 0 {
+            return Color::new(0.0, 0.0, 0.0);
+        }
         if let Some(rec) = world.hit(r, Interval::new(0.001, f32::INFINITY)) {
-            return 0.5 * Color::new(rec.normal.x + 1.0, rec.normal.y + 1.0, rec.normal.z + 1.0);
+            let dir = rec.normal + random_unit_vector();
+            // in return statement below 0.7 is cofficient which controls brightness of light
+            return 0.7 * self.ray_color(&Ray::new(rec.p, dir), depth - 1, world);
         }
         // unit_direction vector
         let unit_direction = r.dir.unit_vector();
