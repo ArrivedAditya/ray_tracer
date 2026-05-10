@@ -1,6 +1,6 @@
 use std::io::{self, Write};
 
-#[derive(Debug)]
+#[derive(Clone, Copy)]
 pub struct Color {
     r: f32,
     g: f32,
@@ -56,6 +56,13 @@ impl AddAssign for Color {
         self.r += rhs.r;
         self.g += rhs.g;
         self.b += rhs.b;
+    }
+}
+
+impl Mul for Color {
+    type Output = Color;
+    fn mul(self, t: Color) -> Color {
+        Color::new(self.r * t.r, self.g * t.g, self.b * t.b)
     }
 }
 

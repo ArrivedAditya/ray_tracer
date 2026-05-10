@@ -6,7 +6,7 @@ use crate::{
     hittable_list::HittableList,
     interval::Interval,
     ray::Ray,
-    vec3::{Point3, Vec3, random_unit_vector},
+    vec3::{Point3, Vec3},
 };
 
 use std::io::{BufWriter, stdout};
@@ -124,9 +124,11 @@ impl Camera {
             return Color::new(0.0, 0.0, 0.0);
         }
         if let Some(rec) = world.hit(r, Interval::new(0.001, f32::INFINITY)) {
-            let dir = rec.normal + random_unit_vector();
-            // in return statement below 0.7 is cofficient which controls brightness of light
-            return 0.7 * self.ray_color(&Ray::new(rec.p, dir), depth - 1, world);
+            if let Some((attenuation, scattered)) = rec.material.scatter(r, &rec) {
+                return attenuation * self.ray_color(&scattered, depth - 1, world);
+            } else {
+                return Color::new(0.0, 0.0, 0.0);
+            }
         }
         // unit_direction vector
         let unit_direction = r.dir.unit_vector();

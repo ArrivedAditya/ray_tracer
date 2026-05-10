@@ -20,6 +20,12 @@ impl Vec3 {
         self.x * self.x + self.y * self.y + self.z * self.z
     }
 
+    pub fn near_zero(&self) -> bool {
+        let s = 1e-8;
+
+        self.x.abs() < s && self.y.abs() < s && self.z < s
+    }
+
     pub fn dot(&self, v: &Vec3) -> f32 {
         self.x * v.x + self.y * v.y + self.z * v.z
     }
@@ -67,11 +73,16 @@ pub fn random_on_hemisphere(normal: &Vec3) -> Vec3 {
         -on_unit_sphere
     }
 }
+
+pub fn reflect(v: Vec3, n: Vec3) -> Vec3 {
+    v - (n * (2.0 * v.dot(&n)))
+}
+
 // for coordiantes
 pub type Point3 = Vec3;
 
 // Defining the operation of Vec3
-use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub};
+use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
 use rand::RngExt;
 
@@ -97,6 +108,14 @@ impl Sub for Vec3 {
     type Output = Vec3;
     fn sub(self, v: Vec3) -> Vec3 {
         Vec3::new(self.x - v.x, self.y - v.y, self.z - v.z)
+    }
+}
+
+impl SubAssign for Vec3 {
+    fn sub_assign(&mut self, rhs: Self) {
+        self.x -= rhs.x;
+        self.y -= rhs.y;
+        self.z -= rhs.z;
     }
 }
 

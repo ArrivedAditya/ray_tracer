@@ -1,4 +1,5 @@
 use crate::interval::Interval;
+use crate::material::MaterialType;
 use crate::ray::Ray;
 use crate::vec3::{Point3, Vec3};
 
@@ -7,6 +8,7 @@ pub struct HitRecord {
     pub normal: Vec3,
     // t is distance
     pub t: f32,
+    pub material: MaterialType,
     pub front_face: bool,
 }
 
