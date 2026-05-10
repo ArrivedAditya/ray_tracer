@@ -14,7 +14,7 @@ use crate::{
     camera::Camera,
     color::Color,
     hittable_list::HittableList,
-    material::{Lambertain, Metal},
+    material::{Dielectric, Lambertain, Metal},
     sphere::Sphere,
     vec3::Point3,
 };
@@ -24,7 +24,8 @@ fn main() {
 
     let material_ground = Arc::new(Lambertain::new(Color::new(0.8, 0.8, 0.0)));
     let material_center = Arc::new(Lambertain::new(Color::new(0.1, 0.2, 0.5)));
-    let material_left = Arc::new(Metal::new(Color::new(0.8, 0.8, 0.8), 0.3));
+    let material_left = Arc::new(Dielectric::new(1.5));
+    let material_bubble = Arc::new(Dielectric::new(1.0 / 1.5));
     let material_right = Arc::new(Metal::new(Color::new(0.8, 0.6, 0.2), 1.0));
 
     let aspect_ratio: f32 = 16.0 / 9.0;
@@ -49,11 +50,17 @@ fn main() {
         material_left,
     )));
     world.add(Arc::new(Sphere::new(
+        Point3::new(-1.0, 0.0, -1.0),
+        0.4,
+        material_bubble,
+    )));
+    world.add(Arc::new(Sphere::new(
         Point3::new(1.0, 0.0, -1.0),
         0.5,
         material_right,
     )));
 
     let mut cam = Camera::new(aspect_ratio, image_width, sample_per_pixel, max_depth);
-    cam.render(&world);
+    let mut rng = rand::rng();
+    cam.render(&world, &mut rng);
 }

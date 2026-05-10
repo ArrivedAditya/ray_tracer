@@ -78,6 +78,13 @@ pub fn reflect(v: Vec3, n: Vec3) -> Vec3 {
     v - (n * (2.0 * v.dot(&n)))
 }
 
+pub fn refract(uv: Vec3, n: Vec3, etai_over_etat: f32) -> Vec3 {
+    let cos_theta = f32::min(n.dot(&(-1.0 * uv)), 1.0);
+    let r_out_prep = etai_over_etat * (uv + (cos_theta * n));
+    let out_parallel = -(f32::abs(1.0 - r_out_prep.length_squared()).sqrt() * n);
+    r_out_prep + out_parallel
+}
+
 // for coordiantes
 pub type Point3 = Vec3;
 

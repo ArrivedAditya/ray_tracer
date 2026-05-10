@@ -16,9 +16,6 @@ pub struct Camera {
     pub sample_per_pixel: i32,
     pub max_depth: i32,
 
-    // for random generation
-    rng: ThreadRng,
-
     image_height: i32,
     pixel_samples_scale: f32,
     center: Point3,
@@ -34,15 +31,12 @@ impl Camera {
             image_height = 1;
         }
 
-        let rng = rand::rng();
-
         let pixel_samples_scale = 1.0 / sample_per_pixel as f32;
 
         Self {
             image_width,
             sample_per_pixel,
             max_depth,
-            rng,
             image_height,
             pixel_samples_scale,
             center: Point3::new(0.0, 0.0, 0.0),
@@ -51,7 +45,7 @@ impl Camera {
             pixel_delta_v: Vec3::new(0.0, 0.0, 0.0),
         }
     }
-    pub fn render(&mut self, world: &HittableList) {
+    pub fn render(&mut self, world: &HittableList, rng: &mut ThreadRng) {
         self.initialize();
 
         println!("P3\n{} {}\n255", self.image_width, self.image_height);
@@ -63,9 +57,9 @@ impl Camera {
             eprint!("\rScanlines remaining {} ", self.image_height - j);
             for i in 0..self.image_width {
                 let mut pixel_color = Color::new(0.0, 0.0, 0.0);
-                for sample in 0..self.sample_per_pixel {
-                    let r = self.get_ray(i, j);
-                    pixel_color += self.ray_color(&r, self.max_depth, world);
+                for _ in 0..self.sample_per_pixel {
+                    let r = self.get_ray(i, j, rng);
+                    pixel_color += self.ray_color(&r, self.max_depth, world, rng);
                 }
                 write_color(&mut out, &intensity, self.pixel_samples_scale * pixel_color)
                     .expect("Failed to write");
@@ -96,11 +90,11 @@ impl Camera {
         self.pixel00_loc = viewport_upper_left + 0.5 * (self.pixel_delta_u + self.pixel_delta_v);
     }
 
-    fn get_ray(&mut self, i: i32, j: i32) -> Ray {
+    fn get_ray(&mut self, i: i32, j: i32, rng: &mut ThreadRng) -> Ray {
         // Construct a camera ray originating from the origin and directed at randomly sampled
         // point around the pixel location i, j.
 
-        let offset = self.sample_square();
+        let offset = self.sample_square(rng);
         let pixel_sample = self.pixel00_loc
             + ((i as f32 + offset.x) * self.pixel_delta_u)
             + ((j as f32 + offset.y) * self.pixel_delta_v);
@@ -110,22 +104,22 @@ impl Camera {
         Ray::new(self.center, ray_direction)
     }
 
-    fn sample_square(&mut self) -> Vec3 {
+    fn sample_square(&mut self, rng: &mut ThreadRng) -> Vec3 {
         // Returns the vector to a random point in the [-.4,-.5]-[+.5,+.5] unit square.
         Vec3::new(
-            self.rng.random_range(-0.5..=0.5),
-            self.rng.random_range(-0.5..=0.5),
+            rng.random_range(-0.5..=0.5),
+            rng.random_range(-0.5..=0.5),
             0.0,
         )
     }
 
-    fn ray_color(&self, r: &Ray, depth: i32, world: &dyn Hittable) -> Color {
+    fn ray_color(&self, r: &Ray, depth: i32, world: &dyn Hittable, rng: &mut ThreadRng) -> Color {
         if depth <= 0 {
             return Color::new(0.0, 0.0, 0.0);
         }
         if let Some(rec) = world.hit(r, Interval::new(0.001, f32::INFINITY)) {
-            if let Some((attenuation, scattered)) = rec.material.scatter(r, &rec) {
-                return attenuation * self.ray_color(&scattered, depth - 1, world);
+            if let Some((attenuation, scattered)) = rec.material.scatter(r, &rec, rng) {
+                return attenuation * self.ray_color(&scattered, depth - 1, world, rng);
             } else {
                 return Color::new(0.0, 0.0, 0.0);
             }
