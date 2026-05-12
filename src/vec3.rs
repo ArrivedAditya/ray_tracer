@@ -85,13 +85,26 @@ pub fn refract(uv: Vec3, n: Vec3, etai_over_etat: f32) -> Vec3 {
     r_out_prep + out_parallel
 }
 
+pub fn random_in_unit_disk(rng: &mut ThreadRng) -> Vec3 {
+    loop {
+        let p = Vec3::new(
+            rng.random_range(-1.0..=1.0),
+            rng.random_range(-1.0..=1.0),
+            0.0,
+        );
+        if p.length_squared() < 1.0 {
+            return p;
+        }
+    }
+}
+
 // for coordiantes
 pub type Point3 = Vec3;
 
 // Defining the operation of Vec3
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
-use rand::RngExt;
+use rand::{RngExt, rngs::ThreadRng};
 
 // vec1 + vec2
 impl Add for Vec3 {

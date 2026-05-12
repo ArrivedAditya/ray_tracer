@@ -28,6 +28,8 @@ fn main() {
     let lookfrom = Point3::new(-2.0, 2.0, 1.0);
     let lookat = Point3::new(0.0, 0.0, -1.0);
     let vup = Vec3::new(0.0, 1.0, 0.0);
+    let defocus_angle = 10.0;
+    let focus_dist = 3.4;
 
     let mut world = HittableList::new();
 
@@ -73,6 +75,8 @@ fn main() {
         lookfrom,
         lookat,
         vup,
+        defocus_angle,
+        focus_dist,
     );
     let mut rng = rand::rng();
     cam.render(&world, &mut rng);
