@@ -11,6 +11,14 @@ impl Color {
     pub fn new(r: f32, g: f32, b: f32) -> Self {
         Self { r, g, b }
     }
+
+    pub fn random_color(rng: &mut ThreadRng, min: f32, max: f32) -> Color {
+        Color::new(
+            rng.random_range(min..=max),
+            rng.random_range(min..=max),
+            rng.random_range(min..=max),
+        )
+    }
 }
 
 pub fn linear_to_gamma(linear_component: f32) -> f32 {
@@ -41,6 +49,9 @@ pub fn write_color<W: Write>(
 }
 
 use std::ops::{Add, AddAssign, Mul};
+
+use rand::RngExt;
+use rand::rngs::ThreadRng;
 
 use crate::interval::Interval;
 

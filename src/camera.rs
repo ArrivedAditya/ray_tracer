@@ -134,7 +134,7 @@ impl Camera {
         self.pixel00_loc = viewport_upper_left + 0.5 * (self.pixel_delta_u + self.pixel_delta_v);
 
         // camera defocus disk basis vectors calculation
-        let defocus_radius = self.focus_dist * (self.defocus_angle / 2.0).tan();
+        let defocus_radius = self.focus_dist * (self.defocus_angle / 2.0).to_radians().tan();
         self.defocus_disk_u = self.u * defocus_radius;
         self.defocus_disk_v = self.v * defocus_radius;
     }
@@ -144,6 +144,7 @@ impl Camera {
         // point around the pixel location i, j.
 
         let offset = self.sample_square(rng);
+
         let pixel_sample = self.pixel00_loc
             + ((i as f32 + offset.x) * self.pixel_delta_u)
             + ((j as f32 + offset.y) * self.pixel_delta_v);
@@ -153,9 +154,9 @@ impl Camera {
         } else {
             self.defocus_disk_sample(rng)
         };
-        let ray_direction = pixel_sample - self.center;
+        let ray_direction = pixel_sample - ray_origin;
 
-        Ray::new(self.center, ray_direction)
+        Ray::new(ray_origin, ray_direction)
     }
 
     fn sample_square(&mut self, rng: &mut ThreadRng) -> Vec3 {

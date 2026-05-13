@@ -17,7 +17,7 @@ impl Vec3 {
     }
 
     pub fn length_squared(&self) -> f32 {
-        self.x * self.x + self.y * self.y + self.z * self.z
+        self.x.powi(2) + self.y.powi(2) + self.z.powi(2)
     }
 
     pub fn near_zero(&self) -> bool {
