@@ -40,11 +40,8 @@ impl Vec3 {
 
     // direction of vector
     pub fn unit_vector(&self) -> Vec3 {
-        Vec3::new(
-            self.x / self.length(),
-            self.y / self.length(),
-            self.z / self.length(),
-        )
+        let length = self.length();
+        Vec3::new(self.x / length, self.y / length, self.z / length)
     }
 }
 

@@ -11,7 +11,7 @@ use std::sync::Arc;
 pub type MaterialType = Arc<dyn Material>;
 
 pub trait Material: Send + Sync {
-    fn scatter(&self, _r_in: &Ray, rec: &HitRecord, rng: &mut ThreadRng) -> Option<(Color, Ray)>;
+    fn scatter(&self, r_in: &Ray, rec: &HitRecord, rng: &mut ThreadRng) -> Option<(Color, Ray)>;
 }
 
 // Lambertain handles scattering of light using whitnesss(albedo) parameter.
@@ -26,12 +26,12 @@ impl Lambertain {
 }
 
 impl Material for Lambertain {
-    fn scatter(&self, _r_in: &Ray, rec: &HitRecord, rng: &mut ThreadRng) -> Option<(Color, Ray)> {
+    fn scatter(&self, r_in: &Ray, rec: &HitRecord, rng: &mut ThreadRng) -> Option<(Color, Ray)> {
         let mut scatter_direction = rec.normal + random_unit_vector();
         if scatter_direction.near_zero() {
             scatter_direction = rec.normal;
         }
-        let scattered = Ray::new(rec.p, scatter_direction);
+        let scattered = Ray::new(rec.p, scatter_direction, r_in.time);
         let attenuation = self.albedo;
 
         Some((attenuation, scattered))
@@ -53,10 +53,10 @@ impl Metal {
 }
 
 impl Material for Metal {
-    fn scatter(&self, _r_in: &Ray, rec: &HitRecord, rng: &mut ThreadRng) -> Option<(Color, Ray)> {
-        let mut reflected = reflect(_r_in.dir, rec.normal);
+    fn scatter(&self, r_in: &Ray, rec: &HitRecord, rng: &mut ThreadRng) -> Option<(Color, Ray)> {
+        let mut reflected = reflect(r_in.dir, rec.normal);
         reflected = reflected.unit_vector() + (self.fuzz * random_unit_vector());
-        let scattered = Ray::new(rec.p, reflected);
+        let scattered = Ray::new(rec.p, reflected, r_in.time);
         let attenuation = self.albedo;
 
         if scattered.dir.dot(&rec.normal) > 0.0 {
@@ -78,7 +78,7 @@ impl Dielectric {
 }
 
 impl Material for Dielectric {
-    fn scatter(&self, _r_in: &Ray, rec: &HitRecord, rng: &mut ThreadRng) -> Option<(Color, Ray)> {
+    fn scatter(&self, r_in: &Ray, rec: &HitRecord, rng: &mut ThreadRng) -> Option<(Color, Ray)> {
         let attenuation = Color::new(1.0, 1.0, 1.0);
         let ri = if rec.front_face {
             1.0 / self.refraction_index
@@ -86,7 +86,7 @@ impl Material for Dielectric {
             self.refraction_index
         };
 
-        let unit_direction = _r_in.dir.unit_vector();
+        let unit_direction = r_in.dir.unit_vector();
 
         let cos_theta = rec.normal.dot(&(-unit_direction));
         let sin_theta = (1.0 - (cos_theta * cos_theta)).sqrt();
@@ -100,7 +100,7 @@ impl Material for Dielectric {
             direction = refract(unit_direction, rec.normal, ri);
         }
 
-        let scattered = Ray::new(rec.p, direction);
+        let scattered = Ray::new(rec.p, direction, r_in.time);
 
         Some((attenuation, scattered))
     }

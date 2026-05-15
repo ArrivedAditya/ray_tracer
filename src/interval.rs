@@ -1,3 +1,4 @@
+#[derive(Clone, Copy)]
 pub struct Interval {
     pub min: f32,
     pub max: f32,
@@ -28,6 +29,11 @@ impl Interval {
         } else {
             x
         }
+    }
+
+    pub fn expand(&self, delta: f32) -> Interval {
+        let padding = delta / 2.0;
+        Interval::new(self.min - padding, self.max + padding)
     }
 
     pub const EMPTY: Interval = Interval {
