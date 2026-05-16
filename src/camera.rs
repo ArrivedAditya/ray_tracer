@@ -65,19 +65,19 @@ impl Camera {
             pixel_samples_scale,
             defocus_angle,
             focus_dist,
-            center: Point3::new(0.0, 0.0, 0.0),
-            pixel00_loc: Point3::new(0.0, 0.0, 0.0),
-            pixel_delta_u: Vec3::new(0.0, 0.0, 0.0),
-            pixel_delta_v: Vec3::new(0.0, 0.0, 0.0),
-            defocus_disk_u: Vec3::new(0.0, 0.0, 0.0),
-            defocus_disk_v: Vec3::new(0.0, 0.0, 0.0),
+            center: Point3::default(),
+            pixel00_loc: Point3::default(),
+            pixel_delta_u: Vec3::default(),
+            pixel_delta_v: Vec3::default(),
+            defocus_disk_u: Vec3::default(),
+            defocus_disk_v: Vec3::default(),
             vfow,
             lookfrom,
             lookat,
             vup,
-            w: Vec3::new(0.0, 0.0, 0.0),
-            u: Vec3::new(0.0, 0.0, 0.0),
-            v: Vec3::new(0.0, 0.0, 0.0),
+            w: Vec3::default(),
+            u: Vec3::default(),
+            v: Vec3::default(),
         }
     }
     pub fn render(&mut self, world: &HittableList, rng: &mut ThreadRng) {
@@ -91,7 +91,7 @@ impl Camera {
         for j in 0..self.image_height {
             eprint!("\rScanlines remaining {} ", self.image_height - j);
             for i in 0..self.image_width {
-                let mut pixel_color = Color::new(0.0, 0.0, 0.0);
+                let mut pixel_color = Color::default();
                 for _ in 0..self.sample_per_pixel {
                     let r = self.get_ray(i, j, rng);
                     pixel_color += self.ray_color(&r, self.max_depth, world, rng);

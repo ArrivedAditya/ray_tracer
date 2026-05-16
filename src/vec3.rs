@@ -1,6 +1,6 @@
 // Vec3 & Point3 form scratch.
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Default, Debug, Copy, Clone)]
 pub struct Vec3 {
     pub x: f32,
     pub y: f32,

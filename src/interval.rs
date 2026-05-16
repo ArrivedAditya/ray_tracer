@@ -9,6 +9,13 @@ impl Interval {
         Self { min, max }
     }
 
+    pub fn new_interval(a: Interval, b: Interval) -> Self {
+        Self {
+            min: if a.min <= b.min { a.min } else { b.min },
+            max: if a.max >= b.max { a.max } else { b.max },
+        }
+    }
+
     pub fn size(&self) -> f32 {
         self.max - self.min
     }

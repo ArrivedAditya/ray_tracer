@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use crate::aabb::AABB;
 use crate::hittable::{HitRecord, Hittable};
 use crate::interval::Interval;
 use crate::material::MaterialType;
@@ -10,15 +11,19 @@ pub struct Sphere {
     center: Ray,
     radius: f32,
     material: MaterialType,
+    bbox: AABB,
 }
 
 impl Sphere {
     pub fn new_static(center: Point3, radius: f32, material: MaterialType) -> Self {
+        let rvec = Point3::new(radius, radius, radius);
+
         Self {
             center: Ray::new(center, Vec3::new(0.0, 0.0, 0.0), 0.0),
             // make sure to get +ve radius as its can't be -ve
             radius: radius.max(0.0),
             material,
+            bbox: AABB::new_defined(&(center - rvec), &(center + rvec)),
         }
     }
 
@@ -28,17 +33,21 @@ impl Sphere {
         radius: f32,
         material: MaterialType,
     ) -> Self {
+        let rvec = Point3::new(radius, radius, radius);
+        let box1 = AABB::new_defined(&(center1 - rvec), &(center1 + rvec));
+        let box2 = AABB::new_defined(&(center2 - rvec), &(center2 + rvec));
         Self {
             center: Ray::new(center1, center2 - center1, 0.0),
             // make sure to get +ve radius as its can't be -ve
             radius: radius.max(0.0),
             material,
+            bbox: AABB::new_box(&box1, &box2),
         }
     }
 }
 
 impl Hittable for Sphere {
-    fn hit(&self, r: &Ray, ray_t: Interval) -> Option<HitRecord> {
+    fn hit(&self, r: &Ray, ray_t: Interval, rec: &mut HitRecord) -> bool {
         let current_center = self.center.at(r.time);
         let oc = current_center - r.origin;
         let a = r.dir.length_squared();
@@ -47,7 +56,7 @@ impl Hittable for Sphere {
 
         let disciminant = (h * h) - (a * c);
         if disciminant < 0.0 {
-            return None;
+            return false;
         }
 
         let sqrtd = disciminant.sqrt();
@@ -57,24 +66,20 @@ impl Hittable for Sphere {
         if !ray_t.surrounds(root) {
             root = (h - sqrtd) / a;
             if !ray_t.surrounds(root) {
-                return None;
+                return false;
             }
         }
 
-        let t = root;
-        let p = r.at(t);
+        rec.t = root;
+        rec.p = r.at(t);
+
+        rec.normal = Vec3::default();
+        rec.material = Arc::clone(&self.material);
+        rec.front_face = false;
+
         let outward_normal = (p - current_center) / self.radius;
-
-        let mut rec = HitRecord {
-            t,
-            p,
-            normal: Vec3::new(0.0, 0.0, 0.0),
-            material: Arc::clone(&self.material),
-            front_face: false,
-        };
-
         rec.set_face_normal(r, outward_normal);
 
-        Some(rec)
+        true
     }
 }

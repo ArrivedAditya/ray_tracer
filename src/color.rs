@@ -1,6 +1,6 @@
 use std::io::{self, Write};
 
-#[derive(Clone, Copy)]
+#[derive(Default, Clone, Copy)]
 pub struct Color {
     r: f32,
     g: f32,

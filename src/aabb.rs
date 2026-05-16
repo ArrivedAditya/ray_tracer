@@ -1,8 +1,8 @@
 // Axis-Aligned Bounding Boxes (AABBs)
 
-use crate::{hittable::Hittable, interval::Interval, vec3::Point3};
+use crate::{interval::Interval, vec3::Point3};
 
-#[derive(Clone, Copy)]
+#[derive(Default, Clone, Copy)]
 pub struct AABB {
     pub x: Interval,
     pub y: Interval,
@@ -31,6 +31,14 @@ impl AABB {
             } else {
                 Interval::new(b.z, a.z)
             },
+        }
+    }
+
+    pub fn new_box(box0: &AABB, box1: &AABB) -> Self {
+        Self {
+            x: Interval::new_interval(box0.x, box1.x),
+            y: Interval::new_interval(box0.y, box1.y),
+            z: Interval::new_interval(box0.z, box1.z),
         }
     }
 
