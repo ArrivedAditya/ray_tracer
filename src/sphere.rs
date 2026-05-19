@@ -71,15 +71,19 @@ impl Hittable for Sphere {
         }
 
         rec.t = root;
-        rec.p = r.at(t);
+        rec.p = r.at(rec.t);
 
         rec.normal = Vec3::default();
         rec.material = Arc::clone(&self.material);
         rec.front_face = false;
 
-        let outward_normal = (p - current_center) / self.radius;
+        let outward_normal = (rec.p - current_center) / self.radius;
         rec.set_face_normal(r, outward_normal);
 
         true
+    }
+
+    fn bounding_box(&self) -> AABB {
+        self.bbox
     }
 }
