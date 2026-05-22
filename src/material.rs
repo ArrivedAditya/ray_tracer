@@ -4,6 +4,7 @@ use crate::{
     color::Color,
     hittable::HitRecord,
     ray::Ray,
+    texture::{SolidColor, TexturePtr},
     vec3::{Vec3, random_unit_vector, reflect, refract},
 };
 use std::sync::Arc;
@@ -16,12 +17,18 @@ pub trait Material: Send + Sync {
 
 // Lambertain handles scattering of light using whitnesss(albedo) parameter.
 pub struct Lambertain {
-    albedo: Color,
+    tex: TexturePtr,
 }
 
 impl Lambertain {
-    pub fn new(albedo: Color) -> Self {
-        Self { albedo }
+    pub fn new(tex: TexturePtr) -> Self {
+        Self { tex }
+    }
+
+    pub fn from_color(albedo: Color) -> Self {
+        Self {
+            tex: Arc::new(SolidColor::new(albedo)),
+        }
     }
 }
 
@@ -32,7 +39,7 @@ impl Material for Lambertain {
             scatter_direction = rec.normal;
         }
         let scattered = Ray::new(rec.p, scatter_direction, r_in.time);
-        let attenuation = self.albedo;
+        let attenuation = self.tex.value(rec.u, rec.v, &rec.p);
 
         Some((attenuation, scattered))
     }

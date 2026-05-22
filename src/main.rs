@@ -8,6 +8,7 @@ mod interval;
 mod material;
 mod ray;
 mod sphere;
+mod texture;
 mod vec3;
 
 use std::sync::Arc;
@@ -18,14 +19,23 @@ use crate::{
     bvh::BVHNode,
     camera::Camera,
     color::Color,
-    hittable::HittablePtr,
     hittable_list::HittableList,
     material::{Dielectric, Lambertain, Metal},
     sphere::Sphere,
+    texture::CheckerPattern,
     vec3::{Point3, Vec3},
 };
 
 fn main() {
+    let scene_no = 2;
+    match scene_no {
+        1 => bouncing_spheres(),
+        2 => checkered_sphere(),
+        _ => panic!("Scene not found"),
+    }
+}
+
+fn bouncing_spheres() {
     let mut rng = rand::rng();
     let aspect_ratio: f32 = 16.0 / 9.0;
     let image_width = 400;
@@ -33,14 +43,25 @@ fn main() {
     let max_depth = 50;
     let vfow = 20.0;
     let lookfrom = Point3::new(13.0, 2.0, 3.0);
-    let lookat = Point3::new(0.0, 0.0, 0.0);
+    let lookat = Point3::default();
     let vup = Vec3::new(0.0, 1.0, 0.0);
     let defocus_angle = 0.6;
     let focus_dist = 10.0;
 
     let mut world = HittableList::new();
 
-    let material_ground = Arc::new(Lambertain::new(Color::new(0.5, 0.5, 0.5)));
+    let checker = Arc::new(CheckerPattern::form_colors(
+        0.32,
+        Color::new(0.2, 0.3, 0.1),
+        Color::new(0.9, 0.9, 0.9),
+    ));
+    world.add(Arc::new(Sphere::new_static(
+        Point3::new(0.0, -1000.0, 0.0),
+        1000.0,
+        Arc::new(Lambertain::new(checker)),
+    )));
+
+    let material_ground = Arc::new(Lambertain::from_color(Color::new(0.5, 0.5, 0.5)));
     world.add(Arc::new(Sphere::new_static(
         Point3::new(0.0, -1000.0, 0.0),
         1000.0,
@@ -60,7 +81,7 @@ fn main() {
                 if choose_material < 0.8 {
                     // diffuse
                     let albedo = Color::random_color(&mut rng, 0.0, 1.0);
-                    let sphere_material = Arc::new(Lambertain::new(albedo));
+                    let sphere_material = Arc::new(Lambertain::from_color(albedo));
                     let center2 = center + Vec3::new(0.0, rng.random_range(0.0..=0.5), 0.0);
                     world.add(Arc::new(Sphere::new_moving(
                         center,
@@ -89,7 +110,7 @@ fn main() {
         material1,
     )));
 
-    let material2 = Arc::new(Lambertain::new(Color::new(0.4, 0.2, 0.1)));
+    let material2 = Arc::new(Lambertain::from_color(Color::new(0.4, 0.2, 0.1)));
     world.add(Arc::new(Sphere::new_static(
         Point3::new(-4.0, 1.0, 0.0),
         1.0,
@@ -119,5 +140,56 @@ fn main() {
         defocus_angle,
         focus_dist,
     );
-    cam.render(&world, &mut rng);
+    cam.render(&world_map, &mut rng);
+}
+
+fn checkered_sphere() {
+    let mut rng = rand::rng();
+    let aspect_ratio: f32 = 16.0 / 9.0;
+    let image_width = 400;
+    let sample_per_pixel = 100;
+    let max_depth = 50;
+    let vfow = 20.0;
+    let lookfrom = Point3::new(13.0, 2.0, 3.0);
+    let lookat = Point3::default();
+    let vup = Vec3::new(0.0, 1.0, 0.0);
+    let defocus_angle = 0.0;
+    let focus_dist = 10.0;
+
+    let mut world = HittableList::new();
+
+    let checker = Arc::new(CheckerPattern::form_colors(
+        0.32,
+        Color::new(0.2, 0.3, 0.1),
+        Color::new(0.9, 0.9, 0.9),
+    ));
+    world.add(Arc::new(Sphere::new_static(
+        Point3::new(0.0, -10.0, 0.0),
+        10.0,
+        Arc::new(Lambertain::new(checker.clone())),
+    )));
+
+    world.add(Arc::new(Sphere::new_static(
+        Point3::new(0.0, 10.0, 0.0),
+        10.0,
+        Arc::new(Lambertain::new(checker)),
+    )));
+
+    let bvh_world = BVHNode::new(&mut world.objects, &mut rng);
+    let mut world_map = HittableList::new();
+    world_map.add(Arc::new(bvh_world));
+
+    let mut cam = Camera::new(
+        aspect_ratio,
+        image_width,
+        sample_per_pixel,
+        max_depth,
+        vfow,
+        lookfrom,
+        lookat,
+        vup,
+        defocus_angle,
+        focus_dist,
+    );
+    cam.render(&world_map, &mut rng);
 }

@@ -12,6 +12,8 @@ pub struct HitRecord {
     pub normal: Vec3,
     // t is distance
     pub t: f32,
+    pub u: f32,
+    pub v: f32,
     pub material: MaterialType,
     pub front_face: bool,
 }
@@ -33,8 +35,9 @@ impl Default for HitRecord {
             p: Point3::default(),
             normal: Vec3::default(),
             t: 0.0,
-            // Create a default placeholder material here
-            material: Arc::new(Lambertain::new(Color::new(0.0, 0.0, 0.0))),
+            u: 0.0,
+            v: 0.0,
+            material: Arc::new(Lambertain::from_color(Color::new(0.0, 0.0, 0.0))),
             front_face: false,
         }
     }
