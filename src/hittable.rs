@@ -1,6 +1,9 @@
+use std::sync::Arc;
+
 use crate::aabb::AABB;
+use crate::color::Color;
 use crate::interval::Interval;
-use crate::material::MaterialType;
+use crate::material::{Lambertain, MaterialType};
 use crate::ray::Ray;
 use crate::vec3::{Point3, Vec3};
 
@@ -23,6 +26,21 @@ impl HitRecord {
         }
     }
 }
+
+impl Default for HitRecord {
+    fn default() -> Self {
+        Self {
+            p: Point3::default(),
+            normal: Vec3::default(),
+            t: 0.0,
+            // Create a default placeholder material here
+            material: Arc::new(Lambertain::new(Color::new(0.0, 0.0, 0.0))),
+            front_face: false,
+        }
+    }
+}
+
+pub type HittablePtr = Arc<dyn Hittable>;
 
 pub trait Hittable {
     fn hit(&self, r: &Ray, ray_t: Interval, rec: &mut HitRecord) -> bool;

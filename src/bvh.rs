@@ -1,26 +1,35 @@
 use rand::{RngExt, rngs::ThreadRng};
 use std::{cmp::Ordering, sync::Arc};
 
-use crate::{aabb::AABB, hittable::Hittable, interval::Interval};
+use crate::{
+    aabb::AABB,
+    hittable::{Hittable, HittablePtr},
+    interval::Interval,
+};
 
-struct BVHNode {
-    left: Arc<dyn Hittable>,
-    right: Arc<dyn Hittable>,
+pub struct BVHNode {
+    left: HittablePtr,
+    right: HittablePtr,
     bbox: AABB,
 }
 
 impl BVHNode {
-    pub fn new(objects: &mut [Arc<dyn Hittable>], rng: &mut ThreadRng) -> Self {
-        let axis = rng.random_range(0..=2);
+    pub fn new(objects: &mut [HittablePtr], rng: &mut ThreadRng) -> Self {
+        let mut bbox = AABB::EMPTY;
+        for object in objects.iter() {
+            bbox = AABB::new_box(&bbox, &object.bounding_box())
+        }
+
+        let axis = bbox.longest_axis();
+
         let comparator = match axis {
             0 => box_x_compare,
             1 => box_y_compare,
             _ => box_z_compare,
         };
         let object_span = objects.len();
-        let left: Arc<dyn Hittable>;
-        let right: Arc<dyn Hittable>;
-
+        let left: HittablePtr;
+        let right: HittablePtr;
         if object_span == 1 {
             left = Arc::clone(&objects[0]);
             right = Arc::clone(&objects[0]);
@@ -42,12 +51,11 @@ impl BVHNode {
             right = Arc::new(BVHNode::new(right_chunk, rng));
         }
 
-        let bbox = AABB::new_box(&left.bounding_box(), &right.bounding_box());
         Self { left, right, bbox }
     }
 }
 
-pub fn box_compare(a: &Arc<dyn Hittable>, b: &Arc<dyn Hittable>, axis_index: i32) -> Ordering {
+pub fn box_compare(a: &HittablePtr, b: &HittablePtr, axis_index: i32) -> Ordering {
     let a_axis_min = a.bounding_box().axis_interval(axis_index).min;
     let b_axis_min = b.bounding_box().axis_interval(axis_index).min;
 
@@ -55,13 +63,13 @@ pub fn box_compare(a: &Arc<dyn Hittable>, b: &Arc<dyn Hittable>, axis_index: i32
         .partial_cmp(&b_axis_min)
         .unwrap_or(Ordering::Equal)
 }
-pub fn box_x_compare(a: &Arc<dyn Hittable>, b: &Arc<dyn Hittable>) -> Ordering {
+pub fn box_x_compare(a: &HittablePtr, b: &HittablePtr) -> Ordering {
     box_compare(a, b, 0)
 }
-pub fn box_y_compare(a: &Arc<dyn Hittable>, b: &Arc<dyn Hittable>) -> Ordering {
+pub fn box_y_compare(a: &HittablePtr, b: &HittablePtr) -> Ordering {
     box_compare(a, b, 1)
 }
-pub fn box_z_compare(a: &Arc<dyn Hittable>, b: &Arc<dyn Hittable>) -> Ordering {
+pub fn box_z_compare(a: &HittablePtr, b: &HittablePtr) -> Ordering {
     box_compare(a, b, 2)
 }
 

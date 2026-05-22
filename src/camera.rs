@@ -2,7 +2,7 @@ use rand::{RngExt, rngs::ThreadRng};
 
 use crate::{
     color::{Color, write_color},
-    hittable::Hittable,
+    hittable::{HitRecord, Hittable},
     hittable_list::HittableList,
     interval::Interval,
     ray::Ray,
@@ -175,10 +175,11 @@ impl Camera {
     }
 
     fn ray_color(&self, r: &Ray, depth: i32, world: &dyn Hittable, rng: &mut ThreadRng) -> Color {
+        let mut rec = HitRecord::default();
         if depth <= 0 {
             return Color::new(0.0, 0.0, 0.0);
         }
-        if let Some(rec) = world.hit(r, Interval::new(0.001, f32::INFINITY)) {
+        if world.hit(r, Interval::new(0.001, f32::INFINITY), &mut rec) {
             if let Some((attenuation, scattered)) = rec.material.scatter(r, &rec, rng) {
                 return attenuation * self.ray_color(&scattered, depth - 1, world, rng);
             } else {

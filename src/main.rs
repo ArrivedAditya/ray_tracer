@@ -15,8 +15,10 @@ use std::sync::Arc;
 use rand::RngExt;
 
 use crate::{
+    bvh::BVHNode,
     camera::Camera,
     color::Color,
+    hittable::HittablePtr,
     hittable_list::HittableList,
     material::{Dielectric, Lambertain, Metal},
     sphere::Sphere,
@@ -100,6 +102,10 @@ fn main() {
         1.0,
         material3,
     )));
+
+    let bvh_world = BVHNode::new(&mut world.objects, &mut rng);
+    let mut world_map = HittableList::new();
+    world_map.add(Arc::new(bvh_world));
 
     let mut cam = Camera::new(
         aspect_ratio,
