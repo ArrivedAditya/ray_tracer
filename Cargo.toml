@@ -4,5 +4,9 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-rand = "0.10.1"
+rand = { version = "0.10.1", default-features = false }
+zune-jpeg = { version = "0.5.15", default-features = false }
+
+[profile.dev.package.zune-jpeg]
+opt-level = 3
 

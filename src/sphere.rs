@@ -1,3 +1,4 @@
+use std::f32::consts::PI;
 use std::sync::Arc;
 
 use crate::aabb::AABB;
@@ -44,6 +45,22 @@ impl Sphere {
             bbox: AABB::new_box(&box1, &box2),
         }
     }
+
+    pub fn get_sphere_uv(p: &Point3) -> (f32, f32) {
+        // p: a given point on the sphere of radius one, centered at the origin.
+        // u: returned value [0,1] of angle around the Y axis from X=-1.
+        // v: returned value [0,1] of angle from Y=-1 to Y=+1.
+        //     <1 0 0> yields <0.50 0.50>       <-1  0  0> yields <0.00 0.50>
+        //     <0 1 0> yields <0.50 1.00>       < 0 -1  0> yields <0.50 0.00>
+        //     <0 0 1> yields <0.25 0.50>       < 0  0 -1> yields <0.75 0.50>
+        let theta = (-p.y).acos();
+        let phi = f32::atan2(-p.z, p.x) + PI;
+
+        let u = phi / (2.0 * PI);
+        let v = theta / PI;
+
+        (u, v)
+    }
 }
 
 impl Hittable for Sphere {
@@ -79,6 +96,9 @@ impl Hittable for Sphere {
 
         let outward_normal = (rec.p - current_center) / self.radius;
         rec.set_face_normal(r, outward_normal);
+        let uv = Sphere::get_sphere_uv(&outward_normal);
+        rec.u = uv.0;
+        rec.v = uv.1;
 
         true
     }
