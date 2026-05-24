@@ -23,15 +23,16 @@ use crate::{
     hittable_list::HittableList,
     material::{Dielectric, Lambertain, Metal},
     sphere::Sphere,
-    texture::CheckerPattern,
+    texture::{CheckerPattern, ImageTexture},
     vec3::{Point3, Vec3},
 };
 
 fn main() {
-    let scene_no = 2;
+    let scene_no = 3;
     match scene_no {
         1 => bouncing_spheres(),
         2 => checkered_sphere(),
+        3 => earth(),
         _ => panic!("Scene not found"),
     }
 }
@@ -193,4 +194,41 @@ fn checkered_sphere() {
         focus_dist,
     );
     cam.render(&world_map, &mut rng);
+}
+
+fn earth() {
+    let mut rng = rand::rng();
+    let aspect_ratio: f32 = 16.0 / 9.0;
+    let image_width = 400;
+    let sample_per_pixel = 100;
+    let max_depth = 50;
+    let vfow = 20.0;
+    let lookfrom = Point3::new(0.0, 0.0, 12.0);
+    let lookat = Point3::default();
+    let vup = Vec3::new(0.0, 1.0, 0.0);
+    let defocus_angle = 0.0;
+    let focus_dist = 10.0;
+
+    let earth_texture = Arc::new(ImageTexture::new("earthmap.jpg"));
+    let earth_surface = Arc::new(Lambertain::new(earth_texture));
+    let mut globe = HittableList::new();
+    globe.add(Arc::new(Sphere::new_static(
+        Point3::default(),
+        2.0,
+        earth_surface,
+    )));
+
+    let mut cam = Camera::new(
+        aspect_ratio,
+        image_width,
+        sample_per_pixel,
+        max_depth,
+        vfow,
+        lookfrom,
+        lookat,
+        vup,
+        defocus_angle,
+        focus_dist,
+    );
+    cam.render(&globe, &mut rng);
 }

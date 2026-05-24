@@ -1,6 +1,11 @@
 use std::sync::Arc;
 
-use crate::{color::Color, vec3::Point3};
+use crate::{
+    color::Color,
+    image::{self, Image},
+    interval::Interval,
+    vec3::Point3,
+};
 
 pub type TexturePtr = Arc<dyn Texture + Send + Sync>;
 
@@ -70,3 +75,34 @@ impl Texture for CheckerPattern {
     }
 }
 
+pub struct ImageTexture {
+    image: Image,
+}
+
+impl ImageTexture {
+    pub fn new(filename: &str) -> Self {
+        Self {
+            image: Image::new(filename),
+        }
+    }
+}
+
+impl Texture for ImageTexture {
+    fn value(&self, u: f32, v: f32, p: &Point3) -> Color {
+        // If no texture data here then show cyan.
+        if self.image.height == 0 {
+            return Color::new(0.0, 1.0, 1.0);
+        }
+
+        let u = Interval::new(0.0, 1.0).clamp(u);
+        let v = 1.0 - Interval::new(0.0, 1.0).clamp(v);
+
+        let i = (u * self.image.width as f32) as u32;
+        let j = (v * self.image.height as f32) as u32;
+
+        let color_scale = 1.0 / 255.0;
+        let pixel = self.image.pixel_data(i, j);
+
+        color_scale * Color::new(pixel[0] as f32, pixel[1] as f32, pixel[2] as f32)
+    }
+}
