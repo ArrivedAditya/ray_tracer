@@ -1,4 +1,4 @@
-use rand::{RngExt, rngs::ThreadRng};
+use fastrand::Rng;
 use std::{cmp::Ordering, sync::Arc};
 
 use crate::{
@@ -14,7 +14,7 @@ pub struct BVHNode {
 }
 
 impl BVHNode {
-    pub fn new(objects: &mut [HittablePtr], rng: &mut ThreadRng) -> Self {
+    pub fn new(objects: &mut [HittablePtr], rng: &mut Rng) -> Self {
         let mut bbox = AABB::EMPTY;
         for object in objects.iter() {
             bbox = AABB::new_box(&bbox, &object.bounding_box())
@@ -81,7 +81,7 @@ impl Hittable for BVHNode {
         rec: &mut crate::hittable::HitRecord,
     ) -> bool {
         if !(self.bbox.hit(r, ray_t)) {
-            return false;
+            false
         } else {
             let hit_left = self.left.hit(r, ray_t, rec);
 

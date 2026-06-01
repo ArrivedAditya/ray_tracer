@@ -1,11 +1,8 @@
 use std::sync::Arc;
 
-use crate::{
-    color::Color,
-    image::{self, Image},
-    interval::Interval,
-    vec3::Point3,
-};
+use fastrand::Rng;
+
+use crate::{color::Color, image::Image, interval::Interval, perlin::PerlinNoise, vec3::Point3};
 
 pub type TexturePtr = Arc<dyn Texture + Send + Sync>;
 
@@ -104,5 +101,25 @@ impl Texture for ImageTexture {
         let pixel = self.image.pixel_data(i, j);
 
         color_scale * Color::new(pixel[0] as f32, pixel[1] as f32, pixel[2] as f32)
+    }
+}
+
+pub struct NoiseTexture {
+    noise: PerlinNoise,
+    pub scale: f32,
+}
+
+impl NoiseTexture {
+    pub fn new(scale: f32, rng: &mut Rng) -> Self {
+        Self {
+            noise: PerlinNoise::new(rng),
+            scale,
+        }
+    }
+}
+
+impl Texture for NoiseTexture {
+    fn value(&self, u: f32, v: f32, p: &Point3) -> Color {
+        Color::new(0.5, 0.5, 0.5) * (1.0 + (self.scale * p.z + 10.0 * self.noise.turb(p, 7)).sin())
     }
 }

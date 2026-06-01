@@ -7,6 +7,7 @@ mod hittable_list;
 mod image;
 mod interval;
 mod material;
+mod perlin;
 mod ray;
 mod sphere;
 mod texture;
@@ -14,7 +15,7 @@ mod vec3;
 
 use std::sync::Arc;
 
-use rand::RngExt;
+use fastrand::Rng;
 
 use crate::{
     bvh::BVHNode,
@@ -23,22 +24,23 @@ use crate::{
     hittable_list::HittableList,
     material::{Dielectric, Lambertain, Metal},
     sphere::Sphere,
-    texture::{CheckerPattern, ImageTexture},
+    texture::{CheckerPattern, ImageTexture, NoiseTexture},
     vec3::{Point3, Vec3},
 };
 
 fn main() {
-    let scene_no = 3;
+    let scene_no = 4;
     match scene_no {
         1 => bouncing_spheres(),
         2 => checkered_sphere(),
         3 => earth(),
+        4 => perlin_spheres(),
         _ => panic!("Scene not found"),
     }
 }
 
 fn bouncing_spheres() {
-    let mut rng = rand::rng();
+    let mut rng = Rng::new();
     let aspect_ratio: f32 = 16.0 / 9.0;
     let image_width = 400;
     let sample_per_pixel = 100;
@@ -72,11 +74,11 @@ fn bouncing_spheres() {
 
     for a in -11..11 {
         for b in -11..11 {
-            let choose_material = rng.random_range(0.0..=1.0);
+            let choose_material = rng.f32_inclusive();
             let center = Point3::new(
-                a as f32 + 0.9 * rng.random_range(0.0..=1.0),
+                a as f32 + 0.9 * rng.f32_inclusive(),
                 0.2,
-                b as f32 + 0.9 * rng.random_range(0.0..=1.0),
+                b as f32 + 0.9 * rng.f32_inclusive(),
             );
 
             if (center - Point3::new(4.0, 0.2, 0.0)).length() > 0.9 {
@@ -84,7 +86,7 @@ fn bouncing_spheres() {
                     // diffuse
                     let albedo = Color::random_color(&mut rng, 0.0, 1.0);
                     let sphere_material = Arc::new(Lambertain::from_color(albedo));
-                    let center2 = center + Vec3::new(0.0, rng.random_range(0.0..=0.5), 0.0);
+                    let center2 = center + Vec3::new(0.0, rng.f32_inclusive() * 0.5, 0.0);
                     world.add(Arc::new(Sphere::new_moving(
                         center,
                         center2,
@@ -94,7 +96,7 @@ fn bouncing_spheres() {
                 } else if choose_material < 0.95 {
                     // metal
                     let albedo = Color::random_color(&mut rng, 0.5, 1.0);
-                    let fuzz = rng.random_range(0.0..=0.5);
+                    let fuzz = rng.f32_inclusive() * 0.5;
                     let sphere_material = Arc::new(Metal::new(albedo, fuzz));
                     world.add(Arc::new(Sphere::new_static(center, 0.2, sphere_material)));
                 } else {
@@ -146,7 +148,7 @@ fn bouncing_spheres() {
 }
 
 fn checkered_sphere() {
-    let mut rng = rand::rng();
+    let mut rng = Rng::new();
     let aspect_ratio: f32 = 16.0 / 9.0;
     let image_width = 400;
     let sample_per_pixel = 100;
@@ -197,7 +199,7 @@ fn checkered_sphere() {
 }
 
 fn earth() {
-    let mut rng = rand::rng();
+    let mut rng = Rng::new();
     let aspect_ratio: f32 = 16.0 / 9.0;
     let image_width = 400;
     let sample_per_pixel = 100;
@@ -231,4 +233,47 @@ fn earth() {
         focus_dist,
     );
     cam.render(&globe, &mut rng);
+}
+
+fn perlin_spheres() {
+    let mut rng = Rng::new();
+    let aspect_ratio: f32 = 16.0 / 9.0;
+    let image_width = 400;
+    let sample_per_pixel = 100;
+    let max_depth = 50;
+    let vfow = 20.0;
+    let lookfrom = Point3::new(13.0, 2.0, 3.0);
+    let lookat = Point3::default();
+    let vup = Vec3::new(0.0, 1.0, 0.0);
+    let defocus_angle = 0.0;
+    let focus_dist = 10.0;
+
+    let mut world = HittableList::new();
+    let pertext = Arc::new(NoiseTexture::new(4.0, &mut rng));
+    let noisy_material = Arc::new(Lambertain::new(pertext));
+    world.add(Arc::new(Sphere::new_static(
+        Point3::new(0.0, -1000.0, 0.0),
+        1000.0,
+        noisy_material.clone(),
+    )));
+
+    world.add(Arc::new(Sphere::new_static(
+        Point3::new(0.0, 2.0, 0.0),
+        2.0,
+        noisy_material,
+    )));
+
+    let mut cam = Camera::new(
+        aspect_ratio,
+        image_width,
+        sample_per_pixel,
+        max_depth,
+        vfow,
+        lookfrom,
+        lookat,
+        vup,
+        defocus_angle,
+        focus_dist,
+    );
+    cam.render(&world, &mut rng);
 }

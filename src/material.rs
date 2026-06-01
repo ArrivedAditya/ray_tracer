@@ -1,5 +1,3 @@
-use rand::{RngExt, rngs::ThreadRng};
-
 use crate::{
     color::Color,
     hittable::HitRecord,
@@ -7,12 +5,13 @@ use crate::{
     texture::{SolidColor, TexturePtr},
     vec3::{Vec3, random_unit_vector, reflect, refract},
 };
+use fastrand::Rng;
 use std::sync::Arc;
 
 pub type MaterialType = Arc<dyn Material>;
 
 pub trait Material: Send + Sync {
-    fn scatter(&self, r_in: &Ray, rec: &HitRecord, rng: &mut ThreadRng) -> Option<(Color, Ray)>;
+    fn scatter(&self, r_in: &Ray, rec: &HitRecord, rng: &mut Rng) -> Option<(Color, Ray)>;
 }
 
 // Lambertain handles scattering of light using whitnesss(albedo) parameter.
@@ -33,8 +32,8 @@ impl Lambertain {
 }
 
 impl Material for Lambertain {
-    fn scatter(&self, r_in: &Ray, rec: &HitRecord, rng: &mut ThreadRng) -> Option<(Color, Ray)> {
-        let mut scatter_direction = rec.normal + random_unit_vector();
+    fn scatter(&self, r_in: &Ray, rec: &HitRecord, rng: &mut Rng) -> Option<(Color, Ray)> {
+        let mut scatter_direction = rec.normal + random_unit_vector(rng, 0.0, 1.0);
         if scatter_direction.near_zero() {
             scatter_direction = rec.normal;
         }
@@ -60,9 +59,9 @@ impl Metal {
 }
 
 impl Material for Metal {
-    fn scatter(&self, r_in: &Ray, rec: &HitRecord, rng: &mut ThreadRng) -> Option<(Color, Ray)> {
+    fn scatter(&self, r_in: &Ray, rec: &HitRecord, rng: &mut Rng) -> Option<(Color, Ray)> {
         let mut reflected = reflect(r_in.dir, rec.normal);
-        reflected = reflected.unit_vector() + (self.fuzz * random_unit_vector());
+        reflected = reflected.unit_vector() + (self.fuzz * random_unit_vector(rng, 0.0, 1.0));
         let scattered = Ray::new(rec.p, reflected, r_in.time);
         let attenuation = self.albedo;
 
@@ -85,7 +84,7 @@ impl Dielectric {
 }
 
 impl Material for Dielectric {
-    fn scatter(&self, r_in: &Ray, rec: &HitRecord, rng: &mut ThreadRng) -> Option<(Color, Ray)> {
+    fn scatter(&self, r_in: &Ray, rec: &HitRecord, rng: &mut Rng) -> Option<(Color, Ray)> {
         let attenuation = Color::new(1.0, 1.0, 1.0);
         let ri = if rec.front_face {
             1.0 / self.refraction_index
@@ -101,7 +100,7 @@ impl Material for Dielectric {
         let cannot_refract = ri * sin_theta > 1.0;
         let direction: Vec3;
 
-        if cannot_refract || reflectance(cos_theta, ri) > rng.random_range(0.0..1.0) {
+        if cannot_refract || reflectance(cos_theta, ri) > rng.f32_inclusive() {
             direction = reflect(unit_direction, rec.normal);
         } else {
             direction = refract(unit_direction, rec.normal, ri);

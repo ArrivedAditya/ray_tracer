@@ -1,3 +1,5 @@
+use crate::interval::Interval;
+use fastrand::Rng;
 use std::io::{self, Write};
 
 #[derive(Default, Clone, Copy)]
@@ -12,11 +14,12 @@ impl Color {
         Self { r, g, b }
     }
 
-    pub fn random_color(rng: &mut ThreadRng, min: f32, max: f32) -> Color {
+    pub fn random_color(rng: &mut Rng, min: f32, max: f32) -> Color {
+        let diff = max - min;
         Color::new(
-            rng.random_range(min..=max),
-            rng.random_range(min..=max),
-            rng.random_range(min..=max),
+            min + rng.f32_inclusive() * diff,
+            min + rng.f32_inclusive() * diff,
+            min + rng.f32_inclusive() * diff,
         )
     }
 }
@@ -49,11 +52,6 @@ pub fn write_color<W: Write>(
 }
 
 use std::ops::{Add, AddAssign, Mul};
-
-use rand::RngExt;
-use rand::rngs::ThreadRng;
-
-use crate::interval::Interval;
 
 impl Add for Color {
     type Output = Color;

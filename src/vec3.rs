@@ -1,4 +1,5 @@
 // Vec3 & Point3 form scratch.
+use fastrand::Rng;
 
 #[derive(Default, Debug, Copy, Clone)]
 pub struct Vec3 {
@@ -45,14 +46,10 @@ impl Vec3 {
     }
 }
 
-pub fn random_unit_vector() -> Vec3 {
-    let mut rng = rand::rng();
+pub fn random_unit_vector(rng: &mut Rng, min: f32, max: f32) -> Vec3 {
+    let mut lerp_range = || min + rng.f32_inclusive() * (max - min);
     loop {
-        let p = Vec3::new(
-            rng.random_range(-1.0..=1.0),
-            rng.random_range(-1.0..=1.0),
-            rng.random_range(-1.0..=1.0),
-        );
+        let p = Vec3::new(lerp_range(), lerp_range(), lerp_range());
 
         let lensq = p.length_squared();
 
@@ -62,8 +59,8 @@ pub fn random_unit_vector() -> Vec3 {
     }
 }
 
-pub fn random_on_hemisphere(normal: &Vec3) -> Vec3 {
-    let on_unit_sphere = random_unit_vector();
+pub fn random_on_hemisphere(normal: &Vec3, rng: &mut Rng) -> Vec3 {
+    let on_unit_sphere = random_unit_vector(rng, 0.0, 1.0);
     if on_unit_sphere.dot(normal) > 0.0 {
         on_unit_sphere
     } else {
@@ -82,13 +79,9 @@ pub fn refract(uv: Vec3, n: Vec3, etai_over_etat: f32) -> Vec3 {
     r_out_prep + out_parallel
 }
 
-pub fn random_in_unit_disk(rng: &mut ThreadRng) -> Vec3 {
+pub fn random_in_unit_disk(rng: &mut Rng) -> Vec3 {
     loop {
-        let p = Vec3::new(
-            rng.random_range(-1.0..=1.0),
-            rng.random_range(-1.0..=1.0),
-            0.0,
-        );
+        let p = Vec3::new(rng.f32_inclusive(), rng.f32_inclusive(), 0.0);
         if p.length_squared() < 1.0 {
             return p;
         }
@@ -100,8 +93,6 @@ pub type Point3 = Vec3;
 
 // Defining the operation of Vec3
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
-
-use rand::{RngExt, rngs::ThreadRng};
 
 // vec1 + vec2
 impl Add for Vec3 {

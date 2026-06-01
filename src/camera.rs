@@ -1,5 +1,3 @@
-use rand::{RngExt, rngs::ThreadRng};
-
 use crate::{
     color::{Color, write_color},
     hittable::{HitRecord, Hittable},
@@ -8,6 +6,7 @@ use crate::{
     ray::Ray,
     vec3::{Point3, Vec3, random_in_unit_disk},
 };
+use fastrand::Rng;
 
 use std::io::{BufWriter, stdout};
 
@@ -80,7 +79,7 @@ impl Camera {
             v: Vec3::default(),
         }
     }
-    pub fn render(&mut self, world: &HittableList, rng: &mut ThreadRng) {
+    pub fn render(&mut self, world: &HittableList, rng: &mut Rng) {
         self.initialize();
 
         println!("P3\n{} {}\n255", self.image_width, self.image_height);
@@ -139,7 +138,7 @@ impl Camera {
         self.defocus_disk_v = self.v * defocus_radius;
     }
 
-    fn get_ray(&mut self, i: i32, j: i32, rng: &mut ThreadRng) -> Ray {
+    fn get_ray(&mut self, i: i32, j: i32, rng: &mut Rng) -> Ray {
         // Construct a camera ray originating from the origin and directed at randomly sampled
         // point around the pixel location i, j.
 
@@ -155,26 +154,22 @@ impl Camera {
             self.defocus_disk_sample(rng)
         };
         let ray_direction = pixel_sample - ray_origin;
-        let ray_time = rng.random_range(0.0..=1.0);
+        let ray_time = rng.f32_inclusive();
 
         Ray::new(ray_origin, ray_direction, ray_time)
     }
 
-    fn sample_square(&mut self, rng: &mut ThreadRng) -> Vec3 {
+    fn sample_square(&mut self, rng: &mut Rng) -> Vec3 {
         // Returns the vector to a random point in the [-.4,-.5]-[+.5,+.5] unit square.
-        Vec3::new(
-            rng.random_range(-0.5..=0.5),
-            rng.random_range(-0.5..=0.5),
-            0.0,
-        )
+        Vec3::new(rng.f32_inclusive() * 0.5, rng.f32_inclusive() * 0.5, 0.0)
     }
 
-    fn defocus_disk_sample(&self, rng: &mut ThreadRng) -> Point3 {
+    fn defocus_disk_sample(&self, rng: &mut Rng) -> Point3 {
         let p = random_in_unit_disk(rng);
         self.center + (p.x * self.defocus_disk_u) + (p.y * self.defocus_disk_v)
     }
 
-    fn ray_color(&self, r: &Ray, depth: i32, world: &dyn Hittable, rng: &mut ThreadRng) -> Color {
+    fn ray_color(&self, r: &Ray, depth: i32, world: &dyn Hittable, rng: &mut Rng) -> Color {
         let mut rec = HitRecord::default();
         if depth <= 0 {
             return Color::new(0.0, 0.0, 0.0);
