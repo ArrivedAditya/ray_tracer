@@ -11,35 +11,23 @@ pub struct AABB {
 
 impl AABB {
     pub fn new(x: Interval, y: Interval, z: Interval) -> Self {
-        Self { x, y, z }
+        Self::pad_to_minimums(x, y, z)
     }
 
     pub fn new_defined(a: &Point3, b: &Point3) -> Self {
-        Self {
-            x: if a.x <= b.x {
-                Interval::new(a.x, b.x)
-            } else {
-                Interval::new(b.x, a.x)
-            },
-            y: if a.y <= b.y {
-                Interval::new(a.y, b.y)
-            } else {
-                Interval::new(b.y, a.y)
-            },
-            z: if a.z <= b.z {
-                Interval::new(a.z, b.z)
-            } else {
-                Interval::new(b.z, a.z)
-            },
-        }
+        let x = Interval::new(a.x.min(b.x), a.x.max(b.x));
+        let y = Interval::new(a.y.min(b.y), a.y.max(b.y));
+        let z = Interval::new(a.z.min(b.z), a.z.max(b.z));
+
+        Self::pad_to_minimums(x, y, z)
     }
 
     pub fn new_box(box0: &AABB, box1: &AABB) -> Self {
-        Self {
-            x: Interval::new_interval(box0.x, box1.x),
-            y: Interval::new_interval(box0.y, box1.y),
-            z: Interval::new_interval(box0.z, box1.z),
-        }
+        let x = Interval::new_interval(box0.x, box1.x);
+        let y = Interval::new_interval(box0.y, box1.y);
+        let z = Interval::new_interval(box0.z, box1.z);
+
+        Self::pad_to_minimums(x, y, z)
     }
 
     pub fn axis_interval(&self, n: i32) -> Interval {
@@ -115,4 +103,23 @@ impl AABB {
         y: Interval::UNIVERSAL,
         z: Interval::UNIVERSAL,
     };
+
+    fn pad_to_minimums(x: Interval, y: Interval, z: Interval) -> Self {
+        // Adjust the AABB so that no side is narrower than some delta, padding if necessary.
+        let delta = 0.001;
+        let mut i = x;
+        let mut j = y;
+        let mut k = z;
+        if i.size() < delta {
+            i = i.expand(delta);
+        }
+        if j.size() < delta {
+            j = j.expand(delta);
+        }
+        if k.size() < delta {
+            k = k.expand(delta);
+        }
+
+        Self { x: i, y: j, z: k }
+    }
 }

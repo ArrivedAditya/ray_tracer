@@ -8,6 +8,7 @@ mod image;
 mod interval;
 mod material;
 mod perlin;
+mod quad;
 mod ray;
 mod sphere;
 mod texture;
@@ -23,18 +24,20 @@ use crate::{
     color::Color,
     hittable_list::HittableList,
     material::{Dielectric, Lambertain, Metal},
+    quad::Quad,
     sphere::Sphere,
     texture::{CheckerPattern, ImageTexture, NoiseTexture},
     vec3::{Point3, Vec3},
 };
 
 fn main() {
-    let scene_no = 4;
+    let scene_no = 5;
     match scene_no {
         1 => bouncing_spheres(),
         2 => checkered_sphere(),
         3 => earth(),
         4 => perlin_spheres(),
+        5 => quad(),
         _ => panic!("Scene not found"),
     }
 }
@@ -261,6 +264,73 @@ fn perlin_spheres() {
         Point3::new(0.0, 2.0, 0.0),
         2.0,
         noisy_material,
+    )));
+
+    let mut cam = Camera::new(
+        aspect_ratio,
+        image_width,
+        sample_per_pixel,
+        max_depth,
+        vfow,
+        lookfrom,
+        lookat,
+        vup,
+        defocus_angle,
+        focus_dist,
+    );
+    cam.render(&world, &mut rng);
+}
+
+fn quad() {
+    let mut rng = Rng::new();
+    let aspect_ratio: f32 = 16.0 / 9.0;
+    let image_width = 400;
+    let sample_per_pixel = 100;
+    let max_depth = 50;
+    let vfow = 80.0;
+    let lookfrom = Point3::new(0.0, 0.0, 9.0);
+    let lookat = Point3::default();
+    let vup = Vec3::new(0.0, 1.0, 0.0);
+    let defocus_angle = 0.0;
+    let focus_dist = 10.0;
+
+    let mut world = HittableList::new();
+
+    let left_red = Arc::new(Lambertain::from_color(Color::new(1.0, 0.2, 0.2)));
+    let back_green = Arc::new(Lambertain::from_color(Color::new(0.2, 1.0, 0.2)));
+    let right_blue = Arc::new(Lambertain::from_color(Color::new(0.2, 0.2, 1.0)));
+    let upper_orange = Arc::new(Lambertain::from_color(Color::new(1.0, 0.5, 0.0)));
+    let lower_teal = Arc::new(Lambertain::from_color(Color::new(0.2, 0.8, 0.8)));
+
+    world.add(Arc::new(Quad::new(
+        Point3::new(-3.0, -2.0, 5.0),
+        Vec3::new(0.0, 0.0, -4.0),
+        Vec3::new(0.0, 4.0, 0.0),
+        left_red,
+    )));
+    world.add(Arc::new(Quad::new(
+        Point3::new(-2.0, -2.0, 0.0),
+        Vec3::new(4.0, 0.0, 0.0),
+        Vec3::new(0.0, 4.0, 0.0),
+        back_green,
+    )));
+    world.add(Arc::new(Quad::new(
+        Point3::new(3.0, -2.0, 1.0),
+        Vec3::new(0.0, 0.0, 4.0),
+        Vec3::new(0.0, 4.0, 0.0),
+        right_blue,
+    )));
+    world.add(Arc::new(Quad::new(
+        Point3::new(-2.0, 3.0, 1.0),
+        Vec3::new(4.0, 0.0, 0.0),
+        Vec3::new(0.0, 0.0, 4.0),
+        upper_orange,
+    )));
+    world.add(Arc::new(Quad::new(
+        Point3::new(-2.0, -3.0, 1.0),
+        Vec3::new(4.0, 0.0, 0.0),
+        Vec3::new(0.0, 0.0, 4.0),
+        lower_teal,
     )));
 
     let mut cam = Camera::new(
