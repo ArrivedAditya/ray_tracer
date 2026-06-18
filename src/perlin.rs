@@ -65,7 +65,7 @@ impl PerlinNoise {
         let mut weight = 1.0;
 
         for i in 0..depth {
-            accum += weight * self.noise(&temp_p);
+            accum += weight * self.noise(&temp_p).abs();
             weight *= 0.5;
             temp_p *= 2.0;
         }

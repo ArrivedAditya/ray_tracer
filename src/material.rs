@@ -3,7 +3,7 @@ use crate::{
     hittable::HitRecord,
     ray::Ray,
     texture::{SolidColor, TexturePtr},
-    vec3::{Vec3, random_unit_vector, reflect, refract},
+    vec3::{Point3, Vec3, random_unit_vector, reflect, refract},
 };
 use fastrand::Rng;
 use std::sync::Arc;
@@ -11,7 +11,19 @@ use std::sync::Arc;
 pub type MaterialType = Arc<dyn Material>;
 
 pub trait Material: Send + Sync {
-    fn scatter(&self, r_in: &Ray, rec: &HitRecord, rng: &mut Rng) -> Option<(Color, Ray)>;
+    fn emmitted(&self, u: f32, v: f32, p: &Point3) -> Color {
+        Color::default()
+    }
+    fn scatter(
+        &self,
+        r_in: &Ray,
+        rec: &HitRecord,
+        rng: &mut Rng,
+        attenuation: &mut Color,
+        scattered: &mut Ray,
+    ) -> bool {
+        false
+    }
 }
 
 // Lambertain handles scattering of light using whitnesss(albedo) parameter.
@@ -32,15 +44,22 @@ impl Lambertain {
 }
 
 impl Material for Lambertain {
-    fn scatter(&self, r_in: &Ray, rec: &HitRecord, rng: &mut Rng) -> Option<(Color, Ray)> {
-        let mut scatter_direction = rec.normal + random_unit_vector(rng, 0.0, 1.0);
+    fn scatter(
+        &self,
+        r_in: &Ray,
+        rec: &HitRecord,
+        rng: &mut Rng,
+        attenuation: &mut Color,
+        scattered: &mut Ray,
+    ) -> bool {
+        let mut scatter_direction = rec.normal + random_unit_vector(rng, -1.0, 1.0);
         if scatter_direction.near_zero() {
             scatter_direction = rec.normal;
         }
-        let scattered = Ray::new(rec.p, scatter_direction, r_in.time);
-        let attenuation = self.tex.value(rec.u, rec.v, &rec.p);
+        *attenuation = self.tex.value(rec.u, rec.v, &rec.p);
+        *scattered = Ray::new(rec.p, scatter_direction, r_in.time);
 
-        Some((attenuation, scattered))
+        true
     }
 }
 
@@ -59,17 +78,20 @@ impl Metal {
 }
 
 impl Material for Metal {
-    fn scatter(&self, r_in: &Ray, rec: &HitRecord, rng: &mut Rng) -> Option<(Color, Ray)> {
+    fn scatter(
+        &self,
+        r_in: &Ray,
+        rec: &HitRecord,
+        rng: &mut Rng,
+        attenuation: &mut Color,
+        scattered: &mut Ray,
+    ) -> bool {
         let mut reflected = reflect(r_in.dir, rec.normal);
         reflected = reflected.unit_vector() + (self.fuzz * random_unit_vector(rng, 0.0, 1.0));
-        let scattered = Ray::new(rec.p, reflected, r_in.time);
-        let attenuation = self.albedo;
+        *scattered = Ray::new(rec.p, reflected, r_in.time);
+        *attenuation = self.albedo;
 
-        if scattered.dir.dot(&rec.normal) > 0.0 {
-            Some((attenuation, scattered))
-        } else {
-            None
-        }
+        return scattered.dir.dot(&rec.normal) > 0.0;
     }
 }
 
@@ -84,8 +106,15 @@ impl Dielectric {
 }
 
 impl Material for Dielectric {
-    fn scatter(&self, r_in: &Ray, rec: &HitRecord, rng: &mut Rng) -> Option<(Color, Ray)> {
-        let attenuation = Color::new(1.0, 1.0, 1.0);
+    fn scatter(
+        &self,
+        r_in: &Ray,
+        rec: &HitRecord,
+        rng: &mut Rng,
+        attenuation: &mut Color,
+        scattered: &mut Ray,
+    ) -> bool {
+        *attenuation = Color::new(1.0, 1.0, 1.0);
         let ri = if rec.front_face {
             1.0 / self.refraction_index
         } else {
@@ -106,9 +135,9 @@ impl Material for Dielectric {
             direction = refract(unit_direction, rec.normal, ri);
         }
 
-        let scattered = Ray::new(rec.p, direction, r_in.time);
+        *scattered = Ray::new(rec.p, direction, r_in.time);
 
-        Some((attenuation, scattered))
+        true
     }
 }
 
@@ -118,4 +147,25 @@ fn reflectance(cosine: f32, refraction_index: f32) -> f32 {
     r0 = r0 * r0;
 
     r0 + (1.0 - r0) * f32::powi(1.0 - cosine, 5)
+}
+
+pub struct DiffuseLight {
+    tex: TexturePtr,
+}
+
+impl DiffuseLight {
+    pub fn new(tex: TexturePtr) -> Self {
+        Self { tex }
+    }
+    pub fn from_color(emit: Color) -> Self {
+        Self {
+            tex: Arc::new(SolidColor::new(emit)),
+        }
+    }
+}
+
+impl Material for DiffuseLight {
+    fn emmitted(&self, u: f32, v: f32, p: &Point3) -> Color {
+        self.tex.value(u, v, p)
+    }
 }

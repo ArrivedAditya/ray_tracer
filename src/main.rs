@@ -23,7 +23,7 @@ use crate::{
     camera::Camera,
     color::Color,
     hittable_list::HittableList,
-    material::{Dielectric, Lambertain, Metal},
+    material::{Dielectric, DiffuseLight, Lambertain, Metal},
     quad::Quad,
     sphere::Sphere,
     texture::{CheckerPattern, ImageTexture, NoiseTexture},
@@ -31,13 +31,15 @@ use crate::{
 };
 
 fn main() {
-    let scene_no = 5;
+    let scene_no = 7;
     match scene_no {
         1 => bouncing_spheres(),
         2 => checkered_sphere(),
         3 => earth(),
         4 => perlin_spheres(),
         5 => quad(),
+        6 => simple_light(),
+        7 => cornell_box(),
         _ => panic!("Scene not found"),
     }
 }
@@ -54,6 +56,7 @@ fn bouncing_spheres() {
     let vup = Vec3::new(0.0, 1.0, 0.0);
     let defocus_angle = 0.6;
     let focus_dist = 10.0;
+    let background = Color::new(0.70, 0.80, 1.00);
 
     let mut world = HittableList::new();
 
@@ -146,6 +149,7 @@ fn bouncing_spheres() {
         vup,
         defocus_angle,
         focus_dist,
+        background,
     );
     cam.render(&world_map, &mut rng);
 }
@@ -162,6 +166,7 @@ fn checkered_sphere() {
     let vup = Vec3::new(0.0, 1.0, 0.0);
     let defocus_angle = 0.0;
     let focus_dist = 10.0;
+    let background = Color::new(0.70, 0.80, 1.00);
 
     let mut world = HittableList::new();
 
@@ -197,6 +202,7 @@ fn checkered_sphere() {
         vup,
         defocus_angle,
         focus_dist,
+        background,
     );
     cam.render(&world_map, &mut rng);
 }
@@ -213,6 +219,7 @@ fn earth() {
     let vup = Vec3::new(0.0, 1.0, 0.0);
     let defocus_angle = 0.0;
     let focus_dist = 10.0;
+    let background = Color::new(0.70, 0.80, 1.00);
 
     let earth_texture = Arc::new(ImageTexture::new("earthmap.jpg"));
     let earth_surface = Arc::new(Lambertain::new(earth_texture));
@@ -234,6 +241,7 @@ fn earth() {
         vup,
         defocus_angle,
         focus_dist,
+        background,
     );
     cam.render(&globe, &mut rng);
 }
@@ -250,6 +258,7 @@ fn perlin_spheres() {
     let vup = Vec3::new(0.0, 1.0, 0.0);
     let defocus_angle = 0.0;
     let focus_dist = 10.0;
+    let background = Color::new(0.70, 0.80, 1.00);
 
     let mut world = HittableList::new();
     let pertext = Arc::new(NoiseTexture::new(4.0, &mut rng));
@@ -277,6 +286,7 @@ fn perlin_spheres() {
         vup,
         defocus_angle,
         focus_dist,
+        background,
     );
     cam.render(&world, &mut rng);
 }
@@ -293,6 +303,7 @@ fn quad() {
     let vup = Vec3::new(0.0, 1.0, 0.0);
     let defocus_angle = 0.0;
     let focus_dist = 10.0;
+    let background = Color::new(0.70, 0.80, 1.00);
 
     let mut world = HittableList::new();
 
@@ -344,6 +355,138 @@ fn quad() {
         vup,
         defocus_angle,
         focus_dist,
+        background,
+    );
+    cam.render(&world, &mut rng);
+}
+
+fn simple_light() {
+    let mut rng = Rng::new();
+    let aspect_ratio: f32 = 16.0 / 9.0;
+    let image_width = 400;
+    let sample_per_pixel = 100;
+    let max_depth = 50;
+    let vfow = 20.0;
+    let lookfrom = Point3::new(26.0, 3.0, 6.0);
+    let lookat = Point3::new(0.0, 2.0, 0.0);
+    let vup = Vec3::new(0.0, 1.0, 0.0);
+    let defocus_angle = 0.0;
+    let focus_dist = 10.0;
+    let background = Color::new(0.0, 0.0, 0.00);
+
+    let mut world = HittableList::new();
+
+    let pretext = Arc::new(NoiseTexture::new(4.0, &mut rng));
+    world.add(Arc::new(Sphere::new_static(
+        Point3::new(0.0, -1000.0, 0.0),
+        1000.0,
+        Arc::new(Lambertain::new(pretext.clone())),
+    )));
+    world.add(Arc::new(Sphere::new_static(
+        Point3::new(0.0, 2.0, 0.0),
+        2.0,
+        Arc::new(Lambertain::new(pretext)),
+    )));
+
+    let difflight = Arc::new(DiffuseLight::from_color(Color::new(4.0, 4.0, 4.0)));
+    world.add(Arc::new(Sphere::new_static(
+        Point3::new(0.0, 7.0, 0.0),
+        2.0,
+        difflight.clone(),
+    )));
+    world.add(Arc::new(Quad::new(
+        Point3::new(3.0, 1.0, -2.0),
+        Vec3::new(2.0, 0.0, 0.0),
+        Vec3::new(0.0, 2.0, 0.0),
+        difflight,
+    )));
+
+    let mut cam = Camera::new(
+        aspect_ratio,
+        image_width,
+        sample_per_pixel,
+        max_depth,
+        vfow,
+        lookfrom,
+        lookat,
+        vup,
+        defocus_angle,
+        focus_dist,
+        background,
+    );
+    cam.render(&world, &mut rng);
+}
+
+fn cornell_box() {
+    let mut rng = Rng::new();
+    let aspect_ratio: f32 = 1.0;
+    let image_width = 600;
+    let sample_per_pixel = 200;
+    let max_depth = 50;
+    let vfow = 40.0;
+    let lookfrom = Point3::new(278.0, 278.0, -800.0);
+    let lookat = Point3::new(278.0, 278.0, 0.0);
+    let vup = Vec3::new(0.0, 1.0, 0.0);
+    let defocus_angle = 0.0;
+    let focus_dist = 10.0;
+    let background = Color::new(0.0, 0.0, 0.0);
+
+    let mut world = HittableList::new();
+
+    let red = Arc::new(Lambertain::from_color(Color::new(0.65, 0.05, 0.05)));
+    let white = Arc::new(Lambertain::from_color(Color::new(0.73, 0.73, 0.73)));
+    let green = Arc::new(Lambertain::from_color(Color::new(0.12, 0.45, 0.15)));
+    let light = Arc::new(DiffuseLight::from_color(Color::new(15.0, 15.0, 15.0)));
+
+    world.add(Arc::new(Quad::new(
+        Point3::new(555.0, 0.0, 0.0),
+        Vec3::new(0.0, 555.0, 0.0),
+        Vec3::new(0.0, 0.0, 555.0),
+        green,
+    )));
+    world.add(Arc::new(Quad::new(
+        Point3::new(0.0, 0.0, 0.0),
+        Vec3::new(0.0, 555.0, 0.0),
+        Vec3::new(0.0, 0.0, 555.0),
+        red,
+    )));
+    world.add(Arc::new(Quad::new(
+        Point3::new(343.0, 554.0, 332.0),
+        Vec3::new(-130.0, 0.0, 0.0),
+        Vec3::new(0.0, 0.0, -105.0),
+        light,
+    )));
+    world.add(Arc::new(Quad::new(
+        Point3::new(0.0, 0.0, 0.0),
+        Vec3::new(555.0, 0.0, 0.0),
+        Vec3::new(0.0, 0.0, 555.0),
+        white.clone(),
+    )));
+    world.add(Arc::new(Quad::new(
+        Point3::new(555.0, 555.0, 555.0),
+        Vec3::new(-555.0, 0.0, 0.0),
+        Vec3::new(0.0, 0.0, -555.0),
+        white.clone(),
+    )));
+    world.add(Arc::new(Quad::new(
+        Point3::new(0.0, 0.0, 555.0),
+        Vec3::new(555.0, 0.0, 0.0),
+        Vec3::new(0.0, 555.0, 0.0),
+        white,
+    )));
+
+    let mut cam = Camera::new(
+        aspect_ratio,
+        image_width,
+        sample_per_pixel,
+        max_depth,
+        vfow,
+        lookfrom,
+        lookat,
+        vup,
+        defocus_angle,
+        focus_dist,
+        background,
     );
     cam.render(&world, &mut rng);
 }

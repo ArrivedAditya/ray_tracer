@@ -20,6 +20,7 @@ pub struct Camera {
     pub vup: Vec3, // Camera relative up direction
     pub defocus_angle: f32,
     pub focus_dist: f32,
+    pub background: Color,
 
     image_height: i32,
     pixel_samples_scale: f32,
@@ -48,6 +49,7 @@ impl Camera {
         vup: Vec3,
         defocus_angle: f32,
         focus_dist: f32,
+        background: Color,
     ) -> Self {
         let mut image_height = (image_width as f32 / aspect_ratio) as i32;
         if image_height < 0 {
@@ -64,6 +66,7 @@ impl Camera {
             pixel_samples_scale,
             defocus_angle,
             focus_dist,
+            background,
             center: Point3::default(),
             pixel00_loc: Point3::default(),
             pixel_delta_u: Vec3::default(),
@@ -161,7 +164,7 @@ impl Camera {
 
     fn sample_square(&mut self, rng: &mut Rng) -> Vec3 {
         // Returns the vector to a random point in the [-.4,-.5]-[+.5,+.5] unit square.
-        Vec3::new(rng.f32_inclusive() * 0.5, rng.f32_inclusive() * 0.5, 0.0)
+        Vec3::new(rng.f32() - 0.5, rng.f32_inclusive() - 0.5, 0.0)
     }
 
     fn defocus_disk_sample(&self, rng: &mut Rng) -> Point3 {
@@ -174,16 +177,35 @@ impl Camera {
         if depth <= 0 {
             return Color::new(0.0, 0.0, 0.0);
         }
-        if world.hit(r, Interval::new(0.001, f32::INFINITY), &mut rec) {
-            if let Some((attenuation, scattered)) = rec.material.scatter(r, &rec, rng) {
-                return attenuation * self.ray_color(&scattered, depth - 1, world, rng);
-            } else {
-                return Color::new(0.0, 0.0, 0.0);
-            }
+
+        if !world.hit(r, Interval::new(0.001, f32::INFINITY), &mut rec) {
+            return self.background;
         }
-        // unit_direction vector
-        let unit_direction = r.dir.unit_vector();
-        let a = 0.5 * (unit_direction.y + 1.0);
-        (1.0 - a) * Color::new(1.0, 1.0, 1.0) + a * Color::new(0.5, 0.7, 1.0)
+
+        let mut attenuation = Color::default();
+        let mut scattered = Ray::default();
+        let color_from_emission = rec.material.emmitted(rec.u, rec.v, &rec.p);
+
+        if !rec
+            .material
+            .scatter(r, &rec, rng, &mut attenuation, &mut scattered)
+        {
+            return color_from_emission;
+        }
+        let color_from_scatter = attenuation * self.ray_color(&scattered, depth - 1, world, rng);
+
+        color_from_emission + color_from_scatter
+
+        // if world.hit(r, Interval::new(0.001, f32::INFINITY), &mut rec) {
+        //     if let Some((attenuation, scattered)) = rec.material.scatter(r, &rec, rng) {
+        //         return attenuation * self.ray_color(&scattered, depth - 1, world, rng);
+        //     } else {
+        //         return Color::new(0.0, 0.0, 0.0);
+        //     }
+        // }
+        // // unit_direction vector
+        // let unit_direction = r.dir.unit_vector();
+        // let a = 0.5 * (unit_direction.y + 1.0);
+        // (1.0 - a) * Color::new(1.0, 1.0, 1.0) + a * Color::new(0.5, 0.7, 1.0)
     }
 }
