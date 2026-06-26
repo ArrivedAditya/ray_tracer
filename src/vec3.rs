@@ -94,11 +94,21 @@ pub type Point3 = Vec3;
 // Defining the operation of Vec3
 use std::ops::{Add, AddAssign, Div, DivAssign, Mul, MulAssign, Neg, Sub, SubAssign};
 
+use crate::aabb::AABB;
+
 // vec1 + vec2
 impl Add for Vec3 {
     type Output = Vec3;
     fn add(self, v: Vec3) -> Vec3 {
         Vec3::new(self.x + v.x, self.y + v.y, self.z + v.z)
+    }
+}
+
+impl Add<Vec3> for AABB {
+    type Output = Self;
+
+    fn add(self, v: Vec3) -> Self {
+        AABB::new(self.x + v.x, self.y + v.y, self.z + v.z)
     }
 }
 

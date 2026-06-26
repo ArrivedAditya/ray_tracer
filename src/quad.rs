@@ -1,6 +1,11 @@
+use std::sync::Arc;
+
+use fastrand::Rng;
+
 use crate::{
     aabb::AABB,
-    hittable::{HitRecord, Hittable},
+    hittable::{HitRecord, Hittable, HittablePtr},
+    hittable_list::HittableList,
     interval::Interval,
     material::MaterialType,
     vec3::{Point3, Vec3},
@@ -46,7 +51,13 @@ impl Quad {
 }
 
 impl Hittable for Quad {
-    fn hit(&self, r: &crate::ray::Ray, ray_t: Interval, rec: &mut HitRecord) -> bool {
+    fn hit(
+        &self,
+        r: &crate::ray::Ray,
+        ray_t: Interval,
+        rec: &mut HitRecord,
+        rng: &mut Rng,
+    ) -> bool {
         let denom = self.normal.dot(&r.dir);
 
         if denom.abs() < 1e-8 {
@@ -91,4 +102,68 @@ fn is_interior(a: f32, b: f32, rec: &mut HitRecord) -> bool {
     rec.v = b;
 
     true
+}
+
+pub fn cube(a: Point3, b: Point3, mat: MaterialType) -> HittablePtr {
+    let mut sides = HittableList::new();
+
+    // 1. Construct the absolute minimum and maximum corners
+    let min = Point3::new(a.x.min(b.x), a.y.min(b.y), a.z.min(b.z));
+    let max = Point3::new(a.x.max(b.x), a.y.max(b.y), a.z.max(b.z));
+
+    // 2. Compute the precise scale vectors along each axis
+    let dx = Vec3::new(max.x - min.x, 0.0, 0.0);
+    let dy = Vec3::new(0.0, max.y - min.y, 0.0);
+    let dz = Vec3::new(0.0, 0.0, max.z - min.z);
+
+    // 3. Construct the 6 faces using the exact canonical starting vertices
+    // Front face
+    sides.add(Arc::new(Quad::new(
+        Point3::new(min.x, min.y, max.z),
+        dx,
+        dy,
+        mat.clone(),
+    )));
+
+    // Right face
+    sides.add(Arc::new(Quad::new(
+        Point3::new(max.x, min.y, max.z),
+        -dz,
+        dy,
+        mat.clone(),
+    )));
+
+    // Back face
+    sides.add(Arc::new(Quad::new(
+        Point3::new(max.x, min.y, min.z),
+        -dx,
+        dy,
+        mat.clone(),
+    )));
+
+    // Left face
+    sides.add(Arc::new(Quad::new(
+        Point3::new(min.x, min.y, min.z),
+        dz,
+        dy,
+        mat.clone(),
+    )));
+
+    // Top face
+    sides.add(Arc::new(Quad::new(
+        Point3::new(min.x, max.y, max.z),
+        dx,
+        -dz,
+        mat.clone(),
+    )));
+
+    // Bottom face
+    sides.add(Arc::new(Quad::new(
+        Point3::new(min.x, min.y, min.z),
+        dx,
+        dz,
+        mat,
+    )));
+
+    Arc::new(sides)
 }

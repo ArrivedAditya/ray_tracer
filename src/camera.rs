@@ -178,7 +178,7 @@ impl Camera {
             return Color::new(0.0, 0.0, 0.0);
         }
 
-        if !world.hit(r, Interval::new(0.001, f32::INFINITY), &mut rec) {
+        if !world.hit(r, Interval::new(0.001, f32::INFINITY), &mut rec, rng) {
             return self.background;
         }
 

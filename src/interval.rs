@@ -59,3 +59,16 @@ impl Default for Interval {
         Self::EMPTY
     }
 }
+
+use std::ops::Add;
+
+impl Add<f32> for Interval {
+    type Output = Self;
+
+    fn add(self, displacement: f32) -> Self {
+        Self {
+            min: self.min + displacement,
+            max: self.max + displacement,
+        }
+    }
+}

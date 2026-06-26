@@ -1,6 +1,8 @@
 use std::f32::consts::PI;
 use std::sync::Arc;
 
+use fastrand::Rng;
+
 use crate::aabb::AABB;
 use crate::hittable::{HitRecord, Hittable};
 use crate::interval::Interval;
@@ -64,7 +66,7 @@ impl Sphere {
 }
 
 impl Hittable for Sphere {
-    fn hit(&self, r: &Ray, ray_t: Interval, rec: &mut HitRecord) -> bool {
+    fn hit(&self, r: &Ray, ray_t: Interval, rec: &mut HitRecord, rng: &mut Rng) -> bool {
         let current_center = self.center.at(r.time);
         let oc = current_center - r.origin;
         let a = r.dir.length_squared();

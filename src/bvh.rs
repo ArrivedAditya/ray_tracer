@@ -79,16 +79,18 @@ impl Hittable for BVHNode {
         r: &crate::ray::Ray,
         ray_t: crate::interval::Interval,
         rec: &mut crate::hittable::HitRecord,
+        rng: &mut Rng,
     ) -> bool {
         if !(self.bbox.hit(r, ray_t)) {
             false
         } else {
-            let hit_left = self.left.hit(r, ray_t, rec);
+            let hit_left = self.left.hit(r, ray_t, rec, rng);
 
             let hit_right = self.right.hit(
                 r,
                 Interval::new(ray_t.min, if hit_left { rec.t } else { ray_t.max }),
                 rec,
+                rng,
             );
 
             hit_left || hit_right

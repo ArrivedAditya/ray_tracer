@@ -2,6 +2,7 @@ mod aabb;
 mod bvh;
 mod camera;
 mod color;
+mod constant_medium;
 mod hittable;
 mod hittable_list;
 mod image;
@@ -22,16 +23,18 @@ use crate::{
     bvh::BVHNode,
     camera::Camera,
     color::Color,
+    constant_medium::ConstantMedium,
+    hittable::{HittablePtr, RotateY, Translate},
     hittable_list::HittableList,
     material::{Dielectric, DiffuseLight, Lambertain, Metal},
-    quad::Quad,
+    quad::{Quad, cube},
     sphere::Sphere,
     texture::{CheckerPattern, ImageTexture, NoiseTexture},
     vec3::{Point3, Vec3},
 };
 
 fn main() {
-    let scene_no = 7;
+    let scene_no = 8;
     match scene_no {
         1 => bouncing_spheres(),
         2 => checkered_sphere(),
@@ -39,7 +42,10 @@ fn main() {
         4 => perlin_spheres(),
         5 => quad(),
         6 => simple_light(),
+        // cornell_box() have problems in cube placement which I can't find the solution to it.
+        // Bear with it.
         7 => cornell_box(),
+        8 => cornell_smoke(),
         _ => panic!("Scene not found"),
     }
 }
@@ -421,7 +427,7 @@ fn cornell_box() {
     let mut rng = Rng::new();
     let aspect_ratio: f32 = 1.0;
     let image_width = 600;
-    let sample_per_pixel = 200;
+    let sample_per_pixel = 100;
     let max_depth = 50;
     let vfow = 40.0;
     let lookfrom = Point3::new(278.0, 278.0, -800.0);
@@ -472,7 +478,127 @@ fn cornell_box() {
         Point3::new(0.0, 0.0, 555.0),
         Vec3::new(555.0, 0.0, 0.0),
         Vec3::new(0.0, 555.0, 0.0),
+        white.clone(),
+    )));
+
+    let mut box1: HittablePtr = cube(
+        Point3::new(0.0, 0.0, 0.0),
+        Point3::new(165.0, 330.0, 165.0),
+        white.clone(),
+    );
+    box1 = Arc::new(RotateY::new(box1, 15.0));
+    box1 = Arc::new(Translate::new(box1, Vec3::new(265.0, 0.0, 295.0)));
+    world.add(box1);
+
+    let mut box2: HittablePtr = cube(
+        Point3::new(0.0, 0.0, 0.0),
+        Point3::new(165.0, 165.0, 165.0),
         white,
+    );
+    box2 = Arc::new(RotateY::new(box2, -18.0));
+    box2 = Arc::new(Translate::new(box2, Vec3::new(130.0, 0.0, 65.0)));
+    world.add(box2);
+
+    let mut cam = Camera::new(
+        aspect_ratio,
+        image_width,
+        sample_per_pixel,
+        max_depth,
+        vfow,
+        lookfrom,
+        lookat,
+        vup,
+        defocus_angle,
+        focus_dist,
+        background,
+    );
+    cam.render(&world, &mut rng);
+}
+
+fn cornell_smoke() {
+    let mut rng = Rng::new();
+    let aspect_ratio: f32 = 1.0;
+    let image_width = 600;
+    let sample_per_pixel = 100;
+    let max_depth = 50;
+    let vfow = 40.0;
+    let lookfrom = Point3::new(278.0, 278.0, -800.0);
+    let lookat = Point3::new(278.0, 278.0, 0.0);
+    let vup = Vec3::new(0.0, 1.0, 0.0);
+    let defocus_angle = 0.0;
+    let focus_dist = 10.0;
+    let background = Color::new(0.0, 0.0, 0.0);
+
+    let mut world = HittableList::new();
+
+    let red = Arc::new(Lambertain::from_color(Color::new(0.65, 0.05, 0.05)));
+    let white = Arc::new(Lambertain::from_color(Color::new(0.73, 0.73, 0.73)));
+    let green = Arc::new(Lambertain::from_color(Color::new(0.12, 0.45, 0.15)));
+    let light = Arc::new(DiffuseLight::from_color(Color::new(7.0, 7.0, 7.0)));
+
+    world.add(Arc::new(Quad::new(
+        Point3::new(555.0, 0.0, 0.0),
+        Vec3::new(0.0, 555.0, 0.0),
+        Vec3::new(0.0, 0.0, 555.0),
+        green,
+    )));
+    world.add(Arc::new(Quad::new(
+        Point3::new(0.0, 0.0, 0.0),
+        Vec3::new(0.0, 555.0, 0.0),
+        Vec3::new(0.0, 0.0, 555.0),
+        red,
+    )));
+    world.add(Arc::new(Quad::new(
+        Point3::new(113.0, 554.0, 127.0),
+        Vec3::new(330.0, 0.0, 0.0),
+        Vec3::new(0.0, 0.0, 305.0),
+        light,
+    )));
+    world.add(Arc::new(Quad::new(
+        Point3::new(0.0, 555.0, 0.0),
+        Vec3::new(555.0, 0.0, 0.0),
+        Vec3::new(0.0, 0.0, 555.0),
+        white.clone(),
+    )));
+    world.add(Arc::new(Quad::new(
+        Point3::new(0.0, 0.0, 0.0),
+        Vec3::new(555.0, 0.0, 0.0),
+        Vec3::new(0.0, 0.0, 555.0),
+        white.clone(),
+    )));
+    world.add(Arc::new(Quad::new(
+        Point3::new(0.0, 0.0, 555.0),
+        Vec3::new(555.0, 0.0, 0.0),
+        Vec3::new(0.0, 555.0, 0.0),
+        white.clone(),
+    )));
+
+    let mut box1: HittablePtr = cube(
+        Point3::new(0.0, 0.0, 0.0),
+        Point3::new(165.0, 330.0, 165.0),
+        white.clone(),
+    );
+    box1 = Arc::new(RotateY::new(box1, 15.0));
+    box1 = Arc::new(Translate::new(box1, Vec3::new(265.0, 0.0, 295.0)));
+
+    let mut box2: HittablePtr = cube(
+        Point3::new(0.0, 0.0, 0.0),
+        Point3::new(165.0, 165.0, 165.0),
+        white,
+    );
+    box2 = Arc::new(RotateY::new(box2, -18.0));
+    box2 = Arc::new(Translate::new(box2, Vec3::new(130.0, 0.0, 65.0)));
+
+    world.add(Arc::new(ConstantMedium::form_color(
+        box1,
+        0.01,
+        Color::new(0.0, 0.0, 0.0),
+    )));
+
+    world.add(Arc::new(ConstantMedium::form_color(
+        box2,
+        0.01,
+        Color::new(1.0, 1.0, 1.0),
     )));
 
     let mut cam = Camera::new(
